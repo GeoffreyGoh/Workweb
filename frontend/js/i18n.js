@@ -1,0 +1,453 @@
+/* =====================================================================
+   Bilingual UI: English and Bahasa Indonesia.
+
+   Mark anything translatable in the HTML:
+
+       <label data-i18n="quotation.customer">Customer</label>
+       <input data-i18n-placeholder="common.search">
+       <button title="..." data-i18n-title="common.remove">
+
+   Then `t('quotation.customer')` from JavaScript for strings built in code.
+   The chosen language lives in localStorage, so it survives a reload and a
+   sign-out. Switching is instant: no page reload, no round trip.
+   ===================================================================== */
+
+const I18N = {
+  en: {
+    'app.title': 'Quotation to Order',
+    'app.signOut': 'Sign out',
+    'app.language': 'Bahasa Indonesia',
+
+    'nav.quotations': 'Quotations',
+    'nav.salesOrders': 'Sales Orders',
+    'nav.purchaseOrders': 'Purchase Orders',
+    'nav.deliveryNotes': 'Surat Jalan',
+    'nav.schedule': 'Delivery Schedule',
+    'nav.receipts': 'Receipts',
+    'nav.reports': 'Reports',
+
+    'common.save': 'Save',
+    'common.saveDraft': 'Save Draft',
+    'common.cancel': 'Cancel',
+    'common.back': 'Back to list',
+    'common.search': 'Search...',
+    'common.clear': 'Clear',
+    'common.all': 'All',
+    'common.status': 'Status',
+    'common.date': 'Date',
+    'common.dateFrom': 'Date from',
+    'common.dateTo': 'Date to',
+    'common.customer': 'Customer',
+    'common.company': 'Company',
+    'common.allCompanies': 'All companies',
+    'common.supplier': 'Supplier',
+    'common.total': 'Total',
+    'common.subtotal': 'Sub Total',
+    'common.discount': 'Discount',
+    'common.netto': 'Netto',
+    'common.ppn': 'PPN',
+    'common.installation': 'Installation',
+    'common.totalQty': 'Total Qty',
+    'common.qty': 'Qty',
+    'common.unit': 'Unit',
+    'common.product': 'Product',
+    'common.description': 'Description',
+    'common.notes': 'Notes',
+    'common.createdBy': 'Created By',
+    'common.loading': 'Loading...',
+    'common.none': 'No records found.',
+    'common.pdf': 'PDF',
+    'common.addLine': '+ Add line',
+    'common.remove': 'Remove line',
+    'common.apply': 'Apply',
+    'common.readOnly': 'Read-only: this document belongs to another user. An admin can change it.',
+    'common.amount': 'Amount',
+    'common.balance': 'Balance',
+    'common.paid': 'Paid',
+    'common.required': 'required',
+
+    'login.title': 'Sign in',
+    'login.username': 'Username',
+    'login.password': 'Password',
+    'login.submit': 'Sign in',
+
+    'quotation.list': 'Quotations',
+    'quotation.new': '+ New Quotation',
+    'quotation.no': 'Quotation #',
+    'quotation.title': 'New Sales Quotation',
+    'quotation.details': 'Quotation Details',
+    'quotation.issuedBy': 'Issued By',
+    'quotation.lineItems': 'Line Items',
+    'quotation.totals': 'Totals',
+    'quotation.discountPct': 'Discount %',
+    'quotation.ppnPct': 'PPN %',
+    'quotation.installationCost': 'Installation Cost',
+    'quotation.installationHint': 'Charged for the whole job, taxed with PPN.',
+    'quotation.dpPercent': 'DP / TOP %',
+    'quotation.dpHint': 'Down payment the customer pays up front.',
+    'quotation.dpAmount': 'Down Payment',
+    'quotation.dpBalance': 'Balance on delivery',
+    'quotation.markSent': 'Mark as Sent',
+    'quotation.markApproved': 'Mark as Approved',
+    'quotation.convert': 'Convert to Sales Order',
+    'quotation.components': 'Components',
+    'quotation.componentsHint': 'Options this fabric can be made in',
+    'quotation.width': 'Width cm',
+    'quotation.height': 'Height cm',
+    'quotation.measure': 'Measure',
+    'quotation.unitPrice': 'Unit Price',
+    'quotation.discPct': 'Disc %',
+    'quotation.lineTotal': 'Line Total',
+    'quotation.net': 'Net',
+    'quotation.followUp': 'Last Follow Up',
+    'quotation.surveyor': 'Surveyor',
+    'quotation.paymentTerms': 'Payment Terms',
+    'quotation.priceGroup': 'Price Group',
+    'quotation.currency': 'Currency',
+    'quotation.exchangeRate': 'Exchange Rate (Kurs)',
+    'quotation.address': 'Address',
+    'quotation.deliverTo': 'Deliver To',
+    'quotation.deliverAddress': 'Deliver Address',
+    'quotation.phone': 'Phone',
+    'quotation.email': 'Email',
+
+    'so.list': 'Sales Orders',
+    'so.no': 'SO #',
+    'so.orderDate': 'Order Date',
+    'so.deliveryDate': 'Delivery Date',
+    'so.confirm': 'Confirm Order',
+    'so.toProduction': 'To Production',
+    'so.markDelivered': 'Mark Delivered',
+    'so.complete': 'Complete',
+    'so.raisePo': 'Raise Purchase Order',
+    'so.splitPo': 'Split PO by Supplier',
+    'so.createSj': '+ Create Surat Jalan',
+    'so.payments': 'Payments Received',
+    'so.recordPayment': '+ Record Payment',
+    'so.deliveries': 'Deliveries (Surat Jalan)',
+    'so.customerPo': 'Customer PO Ref',
+
+    'po.list': 'Purchase Orders',
+    'po.no': 'PO #',
+    'po.materials': 'Materials',
+    'po.requiredBy': 'Required By',
+    'po.markSent': 'Mark as Sent',
+    'po.markReceived': 'Mark as Received',
+    'po.forSalesOrder': 'For Sales Order',
+    'po.splitTitle': 'Split by supplier',
+    'po.splitNone': 'No products on this order have a default supplier set.',
+    'po.splitUnassigned': 'lines have no supplier and were left out',
+    'po.splitCreate': 'Create one PO per supplier',
+
+    'sj.list': 'Surat Jalan',
+    'sj.no': 'Surat Jalan #',
+    'sj.goods': 'Goods to Deliver',
+    'sj.vehicle': 'Vehicle / No. Polisi',
+    'sj.driver': 'Driver / Pengemudi',
+    'sj.receivedBy': 'Received by',
+    'sj.issue': 'Issue & Print',
+    'sj.ordered': 'Ordered',
+    'sj.alreadySent': 'Already Sent',
+    'sj.outstanding': 'Outstanding',
+    'sj.deliverNow': 'Deliver Now',
+    'sj.timeSlot': 'Time Slot',
+    'sj.morning': 'Morning',
+    'sj.afternoon': 'Afternoon',
+    'sj.evening': 'Evening',
+
+    'schedule.title': 'Delivery Schedule',
+    'schedule.today': 'Today',
+    'schedule.overdue': 'Overdue',
+    'schedule.stops': 'stops',
+    'schedule.unscheduled': 'Not yet scheduled',
+    'schedule.unscheduledHint': 'Confirmed orders with goods still outstanding and no Surat Jalan raised.',
+    'schedule.empty': 'Nothing scheduled in this period.',
+    'schedule.driver': 'Driver',
+
+    'receipt.list': 'Receipts',
+    'receipt.no': 'Receipt #',
+    'receipt.method': 'Method',
+    'receipt.reference': 'Reference',
+    'receipt.void': 'Void',
+    'receipt.recordedBy': 'Recorded By',
+    'receipt.fillBalance': 'Fill full balance',
+    'receipt.fillDp': 'Fill DP amount',
+
+    'report.title': 'Reports',
+    'report.sales': 'Sales Report',
+    'report.financial': 'Financial Report',
+    'report.salesperson': 'Salesperson',
+    'report.byUser': 'Sales by Salesperson',
+    'report.byCustomer': 'Sales by Customer',
+    'report.byProduct': 'Sales by Product',
+    'report.byPeriod': 'Monthly Activity',
+    'report.quotations': 'Quotations',
+    'report.orders': 'Sales Orders',
+    'report.conversion': 'Conversion Rate',
+    'report.avgOrder': 'Average Order',
+    'report.revenue': 'Revenue',
+    'report.cost': 'Cost',
+    'report.grossProfit': 'Gross Profit',
+    'report.collected': 'Collected',
+    'report.margin': 'Margin',
+    'report.outstanding': 'outstanding',
+
+    'status.draft': 'Draft',
+    'status.sent': 'Sent',
+    'status.approved': 'Approved',
+    'status.converted': 'Converted',
+    'status.cancelled': 'Cancelled',
+    'status.confirmed': 'Confirmed',
+    'status.in_production': 'In Production',
+    'status.delivered': 'Delivered',
+    'status.completed': 'Completed',
+    'status.received': 'Received',
+    'status.issued': 'Issued',
+    'status.unscheduled': 'Unscheduled',
+  },
+
+  id: {
+    'app.title': 'Penawaran ke Pesanan',
+    'app.signOut': 'Keluar',
+    'app.language': 'English',
+
+    'nav.quotations': 'Penawaran',
+    'nav.salesOrders': 'Pesanan Penjualan',
+    'nav.purchaseOrders': 'Pesanan Pembelian',
+    'nav.deliveryNotes': 'Surat Jalan',
+    'nav.schedule': 'Jadwal Pengiriman',
+    'nav.receipts': 'Kwitansi',
+    'nav.reports': 'Laporan',
+
+    'common.save': 'Simpan',
+    'common.saveDraft': 'Simpan Draft',
+    'common.cancel': 'Batal',
+    'common.back': 'Kembali ke daftar',
+    'common.search': 'Cari...',
+    'common.clear': 'Bersihkan',
+    'common.all': 'Semua',
+    'common.status': 'Status',
+    'common.date': 'Tanggal',
+    'common.dateFrom': 'Tanggal dari',
+    'common.dateTo': 'Tanggal sampai',
+    'common.customer': 'Pelanggan',
+    'common.company': 'Perusahaan',
+    'common.allCompanies': 'Semua perusahaan',
+    'common.supplier': 'Pemasok',
+    'common.total': 'Total',
+    'common.subtotal': 'Sub Total',
+    'common.discount': 'Diskon',
+    'common.netto': 'Netto',
+    'common.ppn': 'PPN',
+    'common.installation': 'Biaya Pemasangan',
+    'common.totalQty': 'Total Jumlah',
+    'common.qty': 'Jumlah',
+    'common.unit': 'Satuan',
+    'common.product': 'Produk',
+    'common.description': 'Keterangan',
+    'common.notes': 'Catatan',
+    'common.createdBy': 'Dibuat Oleh',
+    'common.loading': 'Memuat...',
+    'common.none': 'Tidak ada data.',
+    'common.pdf': 'PDF',
+    'common.addLine': '+ Tambah baris',
+    'common.remove': 'Hapus baris',
+    'common.apply': 'Terapkan',
+    'common.readOnly': 'Hanya baca: dokumen ini milik pengguna lain. Admin dapat mengubahnya.',
+    'common.amount': 'Jumlah',
+    'common.balance': 'Sisa',
+    'common.paid': 'Dibayar',
+    'common.required': 'wajib',
+
+    'login.title': 'Masuk',
+    'login.username': 'Nama Pengguna',
+    'login.password': 'Kata Sandi',
+    'login.submit': 'Masuk',
+
+    'quotation.list': 'Penawaran',
+    'quotation.new': '+ Penawaran Baru',
+    'quotation.no': 'No. Penawaran',
+    'quotation.title': 'Penawaran Penjualan Baru',
+    'quotation.details': 'Detail Penawaran',
+    'quotation.issuedBy': 'Diterbitkan Oleh',
+    'quotation.lineItems': 'Rincian Barang',
+    'quotation.totals': 'Total',
+    'quotation.discountPct': 'Diskon %',
+    'quotation.ppnPct': 'PPN %',
+    'quotation.installationCost': 'Biaya Pemasangan',
+    'quotation.installationHint': 'Dikenakan untuk seluruh pekerjaan, termasuk PPN.',
+    'quotation.dpPercent': 'DP / TOP %',
+    'quotation.dpHint': 'Uang muka yang dibayar pelanggan di awal.',
+    'quotation.dpAmount': 'Uang Muka (DP)',
+    'quotation.dpBalance': 'Pelunasan saat pengiriman',
+    'quotation.markSent': 'Tandai Terkirim',
+    'quotation.markApproved': 'Tandai Disetujui',
+    'quotation.convert': 'Jadikan Pesanan Penjualan',
+    'quotation.components': 'Komponen',
+    'quotation.componentsHint': 'Pilihan yang tersedia untuk kain ini',
+    'quotation.width': 'Lebar cm',
+    'quotation.height': 'Tinggi cm',
+    'quotation.measure': 'Ukuran',
+    'quotation.unitPrice': 'Harga Satuan',
+    'quotation.discPct': 'Disk %',
+    'quotation.lineTotal': 'Total Baris',
+    'quotation.net': 'Netto',
+    'quotation.followUp': 'Tindak Lanjut Terakhir',
+    'quotation.surveyor': 'Surveyor',
+    'quotation.paymentTerms': 'Syarat Pembayaran',
+    'quotation.priceGroup': 'Grup Harga',
+    'quotation.currency': 'Mata Uang',
+    'quotation.exchangeRate': 'Kurs',
+    'quotation.address': 'Alamat',
+    'quotation.deliverTo': 'Kirim Kepada',
+    'quotation.deliverAddress': 'Alamat Pengiriman',
+    'quotation.phone': 'Telepon',
+    'quotation.email': 'Email',
+
+    'so.list': 'Pesanan Penjualan',
+    'so.no': 'No. SO',
+    'so.orderDate': 'Tanggal Pesanan',
+    'so.deliveryDate': 'Tanggal Pengiriman',
+    'so.confirm': 'Konfirmasi Pesanan',
+    'so.toProduction': 'Ke Produksi',
+    'so.markDelivered': 'Tandai Terkirim',
+    'so.complete': 'Selesaikan',
+    'so.raisePo': 'Buat Pesanan Pembelian',
+    'so.splitPo': 'Pisah PO per Pemasok',
+    'so.createSj': '+ Buat Surat Jalan',
+    'so.payments': 'Pembayaran Diterima',
+    'so.recordPayment': '+ Catat Pembayaran',
+    'so.deliveries': 'Pengiriman (Surat Jalan)',
+    'so.customerPo': 'No. PO Pelanggan',
+
+    'po.list': 'Pesanan Pembelian',
+    'po.no': 'No. PO',
+    'po.materials': 'Bahan',
+    'po.requiredBy': 'Dibutuhkan Tanggal',
+    'po.markSent': 'Tandai Terkirim',
+    'po.markReceived': 'Tandai Diterima',
+    'po.forSalesOrder': 'Untuk Pesanan Penjualan',
+    'po.splitTitle': 'Pisah per pemasok',
+    'po.splitNone': 'Belum ada produk pada pesanan ini yang memiliki pemasok utama.',
+    'po.splitUnassigned': 'baris tanpa pemasok dan tidak disertakan',
+    'po.splitCreate': 'Buat satu PO per pemasok',
+
+    'sj.list': 'Surat Jalan',
+    'sj.no': 'No. Surat Jalan',
+    'sj.goods': 'Barang yang Dikirim',
+    'sj.vehicle': 'Kendaraan / No. Polisi',
+    'sj.driver': 'Pengemudi',
+    'sj.receivedBy': 'Diterima oleh',
+    'sj.issue': 'Terbitkan & Cetak',
+    'sj.ordered': 'Dipesan',
+    'sj.alreadySent': 'Sudah Dikirim',
+    'sj.outstanding': 'Sisa',
+    'sj.deliverNow': 'Kirim Sekarang',
+    'sj.timeSlot': 'Waktu',
+    'sj.morning': 'Pagi',
+    'sj.afternoon': 'Siang',
+    'sj.evening': 'Sore',
+
+    'schedule.title': 'Jadwal Pengiriman',
+    'schedule.today': 'Hari Ini',
+    'schedule.overdue': 'Terlambat',
+    'schedule.stops': 'tujuan',
+    'schedule.unscheduled': 'Belum dijadwalkan',
+    'schedule.unscheduledHint': 'Pesanan terkonfirmasi dengan barang tersisa dan belum ada Surat Jalan.',
+    'schedule.empty': 'Tidak ada jadwal pada periode ini.',
+    'schedule.driver': 'Pengemudi',
+
+    'receipt.list': 'Kwitansi',
+    'receipt.no': 'No. Kwitansi',
+    'receipt.method': 'Metode',
+    'receipt.reference': 'Referensi',
+    'receipt.void': 'Batalkan',
+    'receipt.recordedBy': 'Dicatat Oleh',
+    'receipt.fillBalance': 'Isi sisa penuh',
+    'receipt.fillDp': 'Isi jumlah DP',
+
+    'report.title': 'Laporan',
+    'report.sales': 'Laporan Penjualan',
+    'report.financial': 'Laporan Keuangan',
+    'report.salesperson': 'Sales',
+    'report.byUser': 'Penjualan per Sales',
+    'report.byCustomer': 'Penjualan per Pelanggan',
+    'report.byProduct': 'Penjualan per Produk',
+    'report.byPeriod': 'Aktivitas Bulanan',
+    'report.quotations': 'Penawaran',
+    'report.orders': 'Pesanan Penjualan',
+    'report.conversion': 'Tingkat Konversi',
+    'report.avgOrder': 'Rata-rata Pesanan',
+    'report.revenue': 'Pendapatan',
+    'report.cost': 'Biaya',
+    'report.grossProfit': 'Laba Kotor',
+    'report.collected': 'Diterima',
+    'report.margin': 'Margin',
+    'report.outstanding': 'belum dibayar',
+
+    'status.draft': 'Draft',
+    'status.sent': 'Terkirim',
+    'status.approved': 'Disetujui',
+    'status.converted': 'Dikonversi',
+    'status.cancelled': 'Dibatalkan',
+    'status.confirmed': 'Dikonfirmasi',
+    'status.in_production': 'Produksi',
+    'status.delivered': 'Terkirim',
+    'status.completed': 'Selesai',
+    'status.received': 'Diterima',
+    'status.issued': 'Diterbitkan',
+    'status.unscheduled': 'Belum Dijadwalkan',
+  },
+};
+
+const LANG_KEY = 'q2o_lang';
+
+const Lang = {
+  get current() {
+    return localStorage.getItem(LANG_KEY) || 'en';
+  },
+  set current(value) {
+    localStorage.setItem(LANG_KEY, value === 'id' ? 'id' : 'en');
+  },
+  toggle() {
+    Lang.current = Lang.current === 'en' ? 'id' : 'en';
+    applyTranslations();
+  },
+};
+
+/** Translate one key. Falls back to English, then to the key itself, so a
+ *  missing Indonesian string shows readable text rather than a blank. */
+function t(key, fallback) {
+  const dict = I18N[Lang.current] || I18N.en;
+  return dict[key] || I18N.en[key] || fallback || key;
+}
+
+/** Re-render every translatable node in the document. */
+function applyTranslations(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    // Keep any element children (e.g. a required-marker span) intact.
+    const marker = el.querySelector('[data-i18n-keep]');
+    el.textContent = t(key);
+    if (marker) el.appendChild(marker);
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = t(el.getAttribute('data-i18n-title'));
+  });
+  document.documentElement.lang = Lang.current;
+
+  // Anything drawn by JavaScript re-renders itself on this event.
+  document.dispatchEvent(new CustomEvent('languagechange', {
+    detail: { lang: Lang.current },
+  }));
+}
+
+/** Status chips are data, not markup, so they translate through here. */
+function statusLabel(status) {
+  return t(`status.${status}`, status.replace(/_/g, ' '));
+}
+
+document.addEventListener('DOMContentLoaded', () => applyTranslations());

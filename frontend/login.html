@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="login-page">
+
+  <div class="login-box">
+    <div class="head">
+      <h1>Q2O</h1>
+      <p>Quotation to Order &middot; Internal System</p>
+    </div>
+
+    <form id="loginForm" autocomplete="on">
+      <div class="alert error hidden" id="error"></div>
+
+      <div class="field">
+        <label for="username" data-i18n="login.username">Username</label>
+        <input type="text" id="username" name="username" required autofocus autocomplete="username">
+      </div>
+
+      <div class="field">
+        <label for="password" data-i18n="login.password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn primary" id="submitBtn">Sign in</button>
+    </form>
+
+    <div class="foot">Authorised staff only</div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorEl = document.getElementById('error');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Already signed in? Skip the form.
+    if (Auth.token) window.location.replace('quotations.html');
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      errorEl.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing in...';
+
+      try {
+        const { access_token } = await api.login(
+          document.getElementById('username').value.trim(),
+          document.getElementById('password').value
+        );
+        localStorage.setItem('q2o_token', access_token);
+        const user = await api.me();
+        Auth.save(access_token, user);
+        window.location.href = 'quotations.html';
+      } catch (err) {
+        Auth.clear();
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign in';
+      }
+    });
+  </script>
+</body>
+</html>

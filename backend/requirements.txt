@@ -1,0 +1,13 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+SQLAlchemy==2.0.36
+pydantic==2.10.4
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+# Pinned: passlib 1.7.4 reads bcrypt.__about__.__version__, removed in bcrypt 4.1+.
+# Do not bump without also replacing passlib.
+bcrypt==4.0.1
+PyMySQL==1.1.1
+python-dotenv==1.0.1
+reportlab==4.2.5
+openpyxl==3.1.5

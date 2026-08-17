@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delivery Schedule &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="schedule.title">Delivery Schedule</h1>
+      <div class="spacer"></div>
+      <div class="filters" style="gap:10px">
+        <div class="field">
+          <label for="fFrom" data-i18n="common.dateFrom">Date from</label>
+          <input type="date" id="fFrom">
+        </div>
+        <div class="field">
+          <label for="fTo" data-i18n="common.dateTo">Date to</label>
+          <input type="date" id="fTo">
+        </div>
+        <div class="field">
+          <label for="fCompany" data-i18n="common.company">Company</label>
+          <select id="fCompany"></select>
+        </div>
+        <div class="field">
+          <label for="fDriver" data-i18n="schedule.driver">Driver</label>
+          <input type="text" id="fDriver" data-i18n-placeholder="common.search">
+        </div>
+        <button class="btn" id="applyBtn" type="button" data-i18n="common.apply">Apply</button>
+      </div>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+
+    <div id="board"></div>
+
+    <div class="card" id="unscheduledCard" style="display:none">
+      <header>
+        <span data-i18n="schedule.unscheduled">Not yet scheduled</span>
+        <div class="spacer"></div>
+        <span class="hint" data-i18n="schedule.unscheduledHint"></span>
+      </header>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="so.no">SO #</th>
+              <th data-i18n="common.customer">Customer</th>
+              <th data-i18n="quotation.deliverTo">Deliver To</th>
+              <th class="right" data-i18n="sj.outstanding">Outstanding</th>
+              <th style="width:150px"></th>
+            </tr>
+          </thead>
+          <tbody id="unscheduledRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/schedule.js"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Surat Jalan &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 id="pageTitle">Surat Jalan</h1>
+      <span id="statusBadge"></span>
+      <span class="hint" id="ownerNote"></span>
+      <div class="spacer"></div>
+      <a class="btn" href="delivery-notes.html">Back to list</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+    <div class="alert warn" id="lockedNote" style="display:none"></div>
+    <div class="alert info" id="orderLink" style="display:none"></div>
+
+    <div class="card">
+      <header data-i18n="quotation.details">Delivery Details</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label for="sjNo" data-i18n="sj.no">Surat Jalan #</label>
+            <input type="text" id="sjNo" readonly>
+          </div>
+          <div class="field">
+            <label for="deliveryDate" data-i18n="so.deliveryDate">Delivery Date</label>
+            <input type="date" id="deliveryDate">
+          </div>
+          <div class="field">
+            <label for="timeSlot" data-i18n="sj.timeSlot">Time Slot</label>
+            <select id="timeSlot">
+              <option value="">&mdash;</option>
+              <option value="morning" data-i18n="sj.morning">Morning</option>
+              <option value="afternoon" data-i18n="sj.afternoon">Afternoon</option>
+              <option value="evening" data-i18n="sj.evening">Evening</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="vehicleNo" data-i18n="sj.vehicle">Vehicle / No. Polisi</label>
+            <input type="text" id="vehicleNo" placeholder="B 1234 XYZ">
+          </div>
+          <div class="field">
+            <label for="driverName" data-i18n="sj.driver">Driver / Pengemudi</label>
+            <input type="text" id="driverName" placeholder="Name of driver">
+          </div>
+
+          <div class="field col-2">
+            <label for="deliverTo" data-i18n="quotation.deliverTo">Deliver To</label>
+            <input type="text" id="deliverTo">
+          </div>
+          <div class="field col-2">
+            <label for="phone">Contact Phone</label>
+            <input type="text" id="phone">
+          </div>
+
+          <div class="field col-4">
+            <label for="deliverAddress">Delivery Address</label>
+            <textarea id="deliverAddress"></textarea>
+          </div>
+
+          <div class="field col-4">
+            <label for="notes">Notes / Catatan</label>
+            <textarea id="notes" placeholder="Printed on the Surat Jalan"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>
+        Goods to Deliver
+        <div class="spacer"></div>
+        <span class="hint">Quantities are capped at what is still outstanding on the order</span>
+      </header>
+
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th style="width:34px">#</th>
+              <th style="min-width:240px" data-i18n="common.product">Product</th>
+              <th style="min-width:150px" data-i18n="common.description">Description</th>
+              <th class="right" style="width:110px">Size (cm)</th>
+              <th class="right" style="width:90px" data-i18n="sj.ordered">Ordered</th>
+              <th class="right" style="width:110px" data-i18n="sj.alreadySent">Already Sent</th>
+              <th class="right" style="width:110px" data-i18n="sj.outstanding">Outstanding</th>
+              <th class="right" style="width:110px" data-i18n="sj.deliverNow">Deliver Now</th>
+              <th style="width:90px" data-i18n="common.unit">Unit</th>
+            </tr>
+          </thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+      </div>
+
+      <div class="body">
+        <div class="summary">
+          <div class="row total"><span>Total Barang</span><span id="sumQty">0</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="receiptCard" style="display:none">
+      <header data-i18n="sj.receivedBy">Received By</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label for="receivedBy">Signed for by</label>
+            <input type="text" id="receivedBy" placeholder="Name of recipient">
+          </div>
+          <div class="field">
+            <label for="receivedAt">Date received</label>
+            <input type="date" id="receivedAt">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+        <button class="btn primary" id="saveBtn" type="button" data-i18n="common.save">Save</button>
+        <button class="btn brass" id="issueBtn" type="button">Issue &amp; Print</button>
+        <button class="btn" id="deliveredBtn" type="button" data-i18n="so.markDelivered">Mark Delivered</button>
+        <button class="btn" id="pdfBtn" type="button">Surat Jalan PDF</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn danger" id="cancelBtn" type="button">Cancel Surat Jalan</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/delivery-note-form.js"></script>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Purchase Order &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 id="pageTitle">New Purchase Order</h1>
+      <span id="statusBadge"></span>
+      <span class="hint" id="ownerNote"></span>
+      <div class="spacer"></div>
+      <a class="btn" href="purchase-orders.html">Back to list</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+    <div class="alert warn" id="lockedNote" style="display:none"></div>
+
+    <div class="card">
+      <header data-i18n="quotation.details">Purchase Details</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label for="poNo" data-i18n="po.no">Purchase Order #</label>
+            <input type="text" id="poNo" readonly placeholder="Auto-generated on save">
+          </div>
+
+          <div class="field">
+            <label for="orderDate" data-i18n="so.orderDate">Order Date</label>
+            <input type="date" id="orderDate">
+          </div>
+
+          <div class="field">
+            <label for="expectedDate" data-i18n="po.requiredBy">Required By</label>
+            <input type="date" id="expectedDate">
+          </div>
+
+          <div class="field">
+            <label for="ppnPercent" data-i18n="quotation.ppnPct">PPN %</label>
+            <input type="number" id="ppnPercent" class="num" value="11" min="0" max="100" step="0.01">
+          </div>
+
+          <div class="field col-2 autocomplete">
+            <label for="supplierInput">Supplier <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="supplierInput" placeholder="Search by name or code..." autocomplete="off">
+            <div class="results hidden" id="supplierResults"></div>
+            <div class="hint" id="supplierHint">No supplier selected</div>
+          </div>
+
+          <div class="field col-2 autocomplete">
+            <label for="soInput">For Sales Order (optional)</label>
+            <input type="text" id="soInput" placeholder="Link to an SO to track its margin..." autocomplete="off">
+            <div class="results hidden" id="soResults"></div>
+            <div class="hint" id="soHint">Not linked &mdash; counts as general cost only</div>
+          </div>
+
+          <div class="field col-2">
+            <label for="paymentTerms" data-i18n="quotation.paymentTerms">Payment Terms</label>
+            <input type="text" id="paymentTerms">
+          </div>
+
+          <div class="field">
+            <label for="currency" data-i18n="quotation.currency">Currency</label>
+            <select id="currency">
+              <option value="IDR">IDR - Rupiah</option>
+              <option value="USD">USD</option>
+              <option value="SGD">SGD</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="exchangeRate" data-i18n="quotation.exchangeRate">Exchange Rate (Kurs)</label>
+            <input type="number" id="exchangeRate" class="num" value="1" min="0.0001" step="0.0001">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>
+        Materials
+        <div class="spacer"></div>
+        <button class="btn small" id="addRowBtn" type="button" data-i18n="common.addLine">+ Add line</button>
+      </header>
+
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th style="width:34px">#</th>
+              <th style="min-width:280px" data-i18n="common.description">Description</th>
+              <th style="min-width:160px">Link to Product (optional)</th>
+              <th style="width:90px" data-i18n="common.unit">Unit</th>
+              <th class="right" style="width:90px" data-i18n="common.qty">Qty</th>
+              <th class="right" style="width:130px" data-i18n="quotation.unitPrice">Unit Price</th>
+              <th class="right" style="width:130px" data-i18n="common.amount">Amount</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+      </div>
+
+      <div class="body" id="noRows">
+        <div class="empty">No materials yet &mdash; click &ldquo;Add line&rdquo; to start.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <header data-i18n="quotation.totals">Totals</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field col-2">
+            <label for="notes" data-i18n="common.notes">Notes</label>
+            <textarea id="notes"></textarea>
+          </div>
+          <div class="field col-2">
+            <div class="summary">
+              <div class="row"><span>Sub Total</span><span id="sumSubtotal">0</span></div>
+              <div class="row"><span>PPN</span><span id="sumPpn">0</span></div>
+              <div class="row total"><span>Total</span><span id="sumTotal">0</span></div>
+              <div class="row sub"><span>Total Qty</span><span id="sumQty">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+        <button class="btn primary" id="saveBtn" type="button" data-i18n="common.save">Save</button>
+        <button class="btn brass" id="sendBtn" type="button" data-i18n="quotation.markSent">Mark as Sent</button>
+        <button class="btn" id="receivedBtn" type="button">Mark as Received</button>
+        <button class="btn" id="pdfBtn" type="button">Purchase Order PDF</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn danger" id="cancelBtn" type="button">Cancel PO</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/purchase-order-form.js"></script>
+</body>
+</html>

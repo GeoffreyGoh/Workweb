@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Receipts &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="receipt.list">Receipts</h1>
+      <div class="spacer"></div>
+      <span class="hint">Record payments from a sales order</span>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+
+    <div class="card">
+      <div class="body">
+        <div class="filters">
+          <div class="field">
+            <label for="fCompany" data-i18n="common.company">Company</label>
+            <select id="fCompany"></select>
+          </div>
+
+          <div class="field">
+            <label for="fNo" data-i18n="receipt.no">Receipt #</label>
+            <input type="text" id="fNo" placeholder="RCP-202608-">
+          </div>
+          <div class="field">
+            <label for="fFrom" data-i18n="common.dateFrom">Date from</label>
+            <input type="date" id="fFrom">
+          </div>
+          <div class="field">
+            <label for="fTo" data-i18n="common.dateTo">Date to</label>
+            <input type="date" id="fTo">
+          </div>
+          <button class="btn" id="clearBtn" type="button" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>
+        Payments Received
+        <div class="spacer"></div>
+        <span class="hint" id="totalNote"></span>
+      </header>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="receipt.no">Receipt #</th>
+              <th data-i18n="common.date">Date</th>
+              <th>Sales Order</th>
+              <th data-i18n="common.customer">Customer</th>
+              <th data-i18n="receipt.method">Method</th>
+              <th data-i18n="receipt.reference">Reference</th>
+              <th class="right" data-i18n="common.amount">Amount</th>
+              <th data-i18n="receipt.recordedBy">Recorded By</th>
+              <th style="width:150px"></th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="9" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/receipts.js"></script>
+</body>
+</html>

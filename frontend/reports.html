@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reports &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="report.title">Reports</h1>
+      <div class="spacer"></div>
+      <div class="filters" style="gap:10px">
+        <div class="field">
+          <label for="fFrom" data-i18n="common.dateFrom">From</label>
+          <input type="date" id="fFrom">
+        </div>
+        <div class="field">
+          <label for="fTo" data-i18n="common.dateTo">To</label>
+          <input type="date" id="fTo">
+        </div>
+        <div class="field">
+          <label for="fCompany" data-i18n="common.company">Company</label>
+          <select id="fCompany"></select>
+        </div>
+        <div class="field">
+          <label for="fUser" data-i18n="report.salesperson">Salesperson</label>
+          <select id="fUser"><option value="" data-i18n="common.all">All</option></select>
+        </div>
+        <div class="field autocomplete" style="min-width:200px">
+          <label for="fCustomer" data-i18n="common.customer">Customer</label>
+          <input type="text" id="fCustomer" data-i18n-placeholder="common.all">
+          <div class="results hidden" id="fCustomerResults"></div>
+        </div>
+        <button class="btn" id="applyBtn" type="button" data-i18n="common.apply">Apply</button>
+        <button class="btn" id="clearBtn" type="button" data-i18n="common.clear">Clear</button>
+      </div>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+
+    <div class="tabs">
+      <button data-tab="sales" class="active" data-i18n="report.sales">Sales Report</button>
+      <button data-tab="financial" data-i18n="report.financial">Financial Report</button>
+    </div>
+
+    <!-- ============================================= SALES ============ -->
+    <div id="tab-sales">
+      <div class="kpis" style="margin-bottom:16px" id="salesKpis"></div>
+
+      <div class="card">
+        <header data-i18n="report.byPeriod">Monthly Activity</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th class="right" data-i18n="quotation.list">Quotations</th>
+                <th class="right">Quoted Value</th>
+                <th class="right">Orders</th>
+                <th class="right">Order Value</th>
+                <th class="right">Conversion</th>
+              </tr>
+            </thead>
+            <tbody id="salesPeriods"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header data-i18n="report.byUser">Sales by Salesperson</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="report.salesperson">Salesperson</th>
+                <th class="right" data-i18n="report.quotations">Quotations</th>
+                <th class="right">Quoted Value</th>
+                <th class="right" data-i18n="report.orders">Orders</th>
+                <th class="right">Order Value</th>
+                <th class="right" data-i18n="report.conversion">Conversion</th>
+              </tr>
+            </thead>
+            <tbody id="salesUsers"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header data-i18n="report.byCustomer">Sales by Customer</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="common.customer">Customer</th>
+                <th>Code</th>
+                <th class="right">Orders</th>
+                <th class="right">Value (netto)</th>
+                <th class="right">Share</th>
+              </tr>
+            </thead>
+            <tbody id="salesCustomers"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header data-i18n="report.byProduct">Sales by Product</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="common.product">Product</th>
+                <th>Code</th>
+                <th class="right" data-i18n="common.qty">Qty</th>
+                <th class="right" data-i18n="quotation.measure">Measure</th>
+                <th class="right">Value (netto)</th>
+              </tr>
+            </thead>
+            <tbody id="salesProducts"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================= FINANCIAL ============ -->
+    <div id="tab-financial" style="display:none">
+      <div class="kpis" style="margin-bottom:16px" id="finKpis"></div>
+
+      <div class="alert info" id="finNote"></div>
+
+      <div class="card">
+        <header>Revenue vs Cost by Month</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th class="right" data-i18n="report.revenue">Revenue</th>
+                <th class="right" data-i18n="report.cost">Cost</th>
+                <th class="right" data-i18n="report.grossProfit">Gross Profit</th>
+                <th class="right" data-i18n="report.margin">Margin</th>
+              </tr>
+            </thead>
+            <tbody id="finPeriods"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header>Margin per Sales Order</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="so.no">SO #</th>
+                <th data-i18n="common.date">Date</th>
+                <th data-i18n="common.customer">Customer</th>
+                <th class="right" data-i18n="report.revenue">Revenue</th>
+                <th class="right" data-i18n="report.cost">Cost</th>
+                <th class="center">POs</th>
+                <th class="right" data-i18n="report.grossProfit">Gross Profit</th>
+                <th class="right" data-i18n="report.margin">Margin</th>
+              </tr>
+            </thead>
+            <tbody id="finOrders"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/reports.js"></script>
+</body>
+</html>

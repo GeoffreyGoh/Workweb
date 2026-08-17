@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Surat Jalan &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1>Surat Jalan</h1>
+      <span class="hint">Delivery notes &mdash; raised from a confirmed sales order</span>
+      <div class="spacer"></div>
+      <a class="btn" href="sales-orders.html">Go to Sales Orders</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+
+    <div class="card">
+      <div class="body">
+        <div class="filters">
+          <div class="field">
+            <label for="fCompany" data-i18n="common.company">Company</label>
+            <select id="fCompany"></select>
+          </div>
+
+          <div class="field">
+            <label for="fStatus" data-i18n="common.status">Status</label>
+            <select id="fStatus">
+              <option value="" data-i18n="common.all">All</option>
+              <option value="draft">Draft</option>
+              <option value="issued">Issued</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fNo" data-i18n="sj.no">Surat Jalan #</label>
+            <input type="text" id="fNo" placeholder="SJ-202608-">
+          </div>
+          <div class="field">
+            <label for="fFrom" data-i18n="common.dateFrom">Date from</label>
+            <input type="date" id="fFrom">
+          </div>
+          <div class="field">
+            <label for="fTo" data-i18n="common.dateTo">Date to</label>
+            <input type="date" id="fTo">
+          </div>
+          <button class="btn" id="clearBtn" type="button" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="sj.no">Surat Jalan #</th>
+              <th data-i18n="common.date">Date</th>
+              <th>Sales Order</th>
+              <th data-i18n="common.customer">Customer</th>
+              <th data-i18n="quotation.deliverTo">Deliver To</th>
+              <th>Vehicle / Driver</th>
+              <th class="center" data-i18n="common.status">Status</th>
+              <th class="right">Items</th>
+              <th class="right" data-i18n="common.totalQty">Total Qty</th>
+              <th data-i18n="common.createdBy">Created By</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="10" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/delivery-notes.js"></script>
+</body>
+</html>

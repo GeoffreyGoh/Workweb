@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local dev database (SQLite)
+*.db
+backend/q2o.db
+
+# Secrets
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# pytest
+.pytest_cache/

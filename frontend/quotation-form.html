@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quotation &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 id="pageTitle" data-i18n="quotation.title">New Sales Quotation</h1>
+      <span id="statusBadge"></span>
+      <span class="hint" id="ownerNote"></span>
+      <div class="spacer"></div>
+      <a class="btn" href="quotations.html">Back to list</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+    <div class="alert warn" id="lockedNote" style="display:none"></div>
+
+    <!-- ------------------------------------------------------- header -->
+    <div class="card">
+      <header data-i18n="quotation.details">Quotation Details</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label for="quotationNo" data-i18n="quotation.no">Sales Quotation #</label>
+            <input type="text" id="quotationNo" readonly placeholder="Auto-generated on save">
+          </div>
+
+          <div class="field">
+            <label for="companySelect" data-i18n="quotation.issuedBy">Issued By</label>
+            <select id="companySelect"></select>
+          </div>
+
+          <div class="field">
+            <label for="quotationDate" data-i18n="common.date">Date</label>
+            <input type="date" id="quotationDate">
+          </div>
+
+          <div class="field">
+            <label for="lastFollowUp" data-i18n="quotation.followUp">Last Follow Up</label>
+            <input type="date" id="lastFollowUp">
+          </div>
+
+          <div class="field">
+            <label for="surveyor" data-i18n="quotation.surveyor">Surveyor</label>
+            <input type="text" id="surveyor" placeholder="Name of surveyor">
+          </div>
+
+          <div class="field col-2 autocomplete">
+            <label for="customerInput">Customer <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="customerInput" placeholder="Search by name or code..." autocomplete="off">
+            <div class="results hidden" id="customerResults"></div>
+            <div class="hint" id="customerHint">No customer selected</div>
+          </div>
+
+          <div class="field">
+            <label for="nikNpwp">NIK / NPWP</label>
+            <input type="text" id="nikNpwp">
+          </div>
+
+          <div class="field">
+            <label for="phone" data-i18n="quotation.phone">Phone</label>
+            <input type="text" id="phone">
+          </div>
+
+          <div class="field col-2">
+            <label for="address" data-i18n="quotation.address">Address</label>
+            <textarea id="address"></textarea>
+          </div>
+
+          <div class="field col-2">
+            <label for="deliverAddress" data-i18n="quotation.deliverAddress">Deliver Address</label>
+            <textarea id="deliverAddress"></textarea>
+          </div>
+
+          <div class="field col-2">
+            <label for="deliverTo" data-i18n="quotation.deliverTo">Deliver To</label>
+            <input type="text" id="deliverTo">
+          </div>
+
+          <div class="field col-2">
+            <label for="email" data-i18n="quotation.email">Email</label>
+            <input type="text" id="email">
+          </div>
+
+          <div class="field">
+            <label for="currency" data-i18n="quotation.currency">Currency</label>
+            <select id="currency">
+              <option value="IDR">IDR - Rupiah</option>
+              <option value="USD">USD</option>
+              <option value="SGD">SGD</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="exchangeRate" data-i18n="quotation.exchangeRate">Exchange Rate (Kurs)</label>
+            <input type="number" id="exchangeRate" class="num" value="1" min="0.0001" step="0.0001">
+          </div>
+
+          <div class="field">
+            <label for="priceGroup" data-i18n="quotation.priceGroup">Price Group</label>
+            <input type="text" id="priceGroup">
+          </div>
+
+          <div class="field">
+            <label for="paymentTerms" data-i18n="quotation.paymentTerms">Payment Terms</label>
+            <input type="text" id="paymentTerms">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------- line items -->
+    <div class="card">
+      <header>
+        Line Items
+        <div class="spacer"></div>
+        <button class="btn small" id="addRowBtn" type="button" data-i18n="common.addLine">+ Add line</button>
+      </header>
+
+      <div class="table-wrap">
+        <table class="data" id="itemsTable">
+          <thead id="itemHead"></thead>
+          <tbody id="itemRows"></tbody>
+        </table>
+      </div>
+
+      <div class="body" id="noRows">
+        <div class="empty">No line items yet &mdash; click &ldquo;Add line&rdquo; to start.</div>
+      </div>
+    </div>
+
+    <!-- ----------------------------------------------------- totals -->
+    <div class="card">
+      <header data-i18n="quotation.totals">Totals</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label for="discountPercent">Discount % (base 35, editable)</label>
+            <input type="number" id="discountPercent" class="num" value="35" min="0" max="100" step="0.01">
+            <div class="hint">Applies to any line without its own Disc %.</div>
+          </div>
+
+          <div class="field">
+            <label for="ppnPercent" data-i18n="quotation.ppnPct">PPN %</label>
+            <input type="number" id="ppnPercent" class="num" value="11" min="0" max="100" step="0.01">
+          </div>
+
+          <div class="field">
+            <label for="installationCost" data-i18n="quotation.installationCost">Installation Cost</label>
+            <input type="number" id="installationCost" class="num" value="0" min="0" step="1000">
+            <div class="hint" data-i18n="quotation.installationHint">Charged for the whole job, taxed with PPN.</div>
+          </div>
+
+          <div class="field">
+            <label for="dpPercent" data-i18n="quotation.dpPercent">DP / TOP %</label>
+            <input type="number" id="dpPercent" class="num" min="0" max="100" step="0.01" placeholder="50">
+            <div class="hint" data-i18n="quotation.dpHint">Down payment the customer pays up front.</div>
+          </div>
+
+          <div class="field col-2">
+            <div class="summary">
+              <div class="row"><span>Sub Total</span><span id="sumSubtotal">0</span></div>
+              <div class="row"><span>Discount</span><span id="sumDiscount">0</span></div>
+              <div class="row"><span>Netto</span><span id="sumNetto">0</span></div>
+              <div class="row"><span data-i18n="common.installation">Installation</span><span id="sumInstall">0</span></div>
+              <div class="row"><span data-i18n="common.ppn">PPN</span><span id="sumPpn">0</span></div>
+              <div class="row total"><span data-i18n="common.total">Total</span><span id="sumTotal">0</span></div>
+              <div class="row sub"><span data-i18n="common.totalQty">Total Qty</span><span id="sumQty">0</span></div>
+              <div class="row sub dp-row"><span data-i18n="quotation.dpAmount">Down Payment</span><span id="sumDp">-</span></div>
+              <div class="row sub dp-row"><span data-i18n="quotation.dpBalance">Balance on delivery</span><span id="sumDpBalance">-</span></div>
+            </div>
+          </div>
+
+          <div class="field col-4">
+            <label for="notes" data-i18n="common.notes">Notes</label>
+            <textarea id="notes"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- actions -->
+    <div class="card">
+      <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+        <button class="btn primary" id="saveBtn" type="button" data-i18n="common.saveDraft">Save Draft</button>
+        <button class="btn brass" id="sendBtn" type="button" data-i18n="quotation.markSent">Mark as Sent</button>
+        <button class="btn" id="approveBtn" type="button" data-i18n="quotation.markApproved">Mark as Approved</button>
+        <button class="btn" id="pdfBtn" type="button">Quotation PDF</button>
+        <button class="btn primary" id="convertBtn" type="button" data-i18n="quotation.convert">Convert to Sales Order</button>
+        <div class="spacer" style="flex:1"></div>
+        <button class="btn danger" id="cancelBtn" type="button">Cancel Quotation</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/line-editor.js"></script>
+  <script>document.getElementById('itemHead').innerHTML = LINE_TABLE_HEAD;</script>
+  <script src="js/quotation-form.js"></script>
+</body>
+</html>

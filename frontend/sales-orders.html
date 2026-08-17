@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales Orders &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="so.list">Sales Orders</h1>
+      <div class="spacer"></div>
+      <a class="btn brass" href="sales-order-form.html">+ New Sales Order</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+
+    <div class="card">
+      <div class="body">
+        <div class="filters">
+          <div class="field">
+            <label for="fCompany" data-i18n="common.company">Company</label>
+            <select id="fCompany"></select>
+          </div>
+
+          <div class="field">
+            <label for="fStatus" data-i18n="common.status">Status</label>
+            <select id="fStatus">
+              <option value="" data-i18n="common.all">All</option>
+              <option value="draft">Draft</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="in_production">In Production</option>
+              <option value="delivered">Delivered</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div class="field autocomplete" style="min-width:240px">
+            <label for="fCustomer" data-i18n="common.customer">Customer</label>
+            <input type="text" id="fCustomer" placeholder="All customers">
+            <div class="results hidden" id="fCustomerResults"></div>
+          </div>
+
+          <div class="field">
+            <label for="fNo" data-i18n="so.no">SO #</label>
+            <input type="text" id="fNo" placeholder="SO-202608-">
+          </div>
+
+          <div class="field">
+            <label for="fFrom" data-i18n="common.dateFrom">Date from</label>
+            <input type="date" id="fFrom">
+          </div>
+
+          <div class="field">
+            <label for="fTo" data-i18n="common.dateTo">Date to</label>
+            <input type="date" id="fTo">
+          </div>
+
+          <div class="field" style="min-width:auto">
+            <label for="fMine">&nbsp;</label>
+            <label style="text-transform:none; font-weight:400; font-size:13px; display:flex; gap:6px; align-items:center; padding-bottom:8px">
+              <input type="checkbox" id="fMine" style="width:auto"> Only mine
+            </label>
+          </div>
+
+          <button class="btn" id="clearBtn" type="button" data-i18n="common.clear">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="so.no">SO #</th>
+              <th data-i18n="common.date">Date</th>
+              <th data-i18n="common.customer">Customer</th>
+              <th>From Quotation</th>
+              <th class="center" data-i18n="common.status">Status</th>
+              <th class="right" data-i18n="common.total">Total</th>
+              <th class="right" data-i18n="common.paid">Paid</th>
+              <th class="right">Balance</th>
+              <th data-i18n="common.company">Company</th>
+              <th data-i18n="common.createdBy">Created By</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="10" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/sales-orders.js"></script>
+</body>
+</html>
