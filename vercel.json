@@ -1,5 +1,5 @@
 {
-  "buildCommand": "uv venv && uv pip install -r backend/requirements.txt",
+  "buildCommand": "python -m pip install -r backend/requirements.txt",
   "outputDirectory": "backend",
   "routes": [
     {
