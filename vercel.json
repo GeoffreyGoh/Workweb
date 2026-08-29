@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python -m pip install -r backend/requirements.txt",
+  "buildCommand": "python -m venv .venv && .venv/bin/python -m pip install --upgrade pip setuptools wheel && .venv/bin/python -m pip install -r backend/requirements.txt",
   "outputDirectory": "backend",
   "routes": [
     {
