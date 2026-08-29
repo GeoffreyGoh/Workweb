@@ -1,24 +1,39 @@
 /* ===================================================================
-   Q2O - shared styles. Navy/brass, enterprise tool, no decoration.
+   Q2O - shared styles. Sky blue, enterprise tool, no decoration.
+
+   The palette is one blue family at different depths. Every rule reads
+   these variables, so the whole app re-skins from this block alone.
+
+   The --navy-* and --brass-* names are kept: they are referenced in
+   roughly forty places and renaming them would be churn without benefit.
+   They now hold sky-blue values - deep for chrome and text, mid for
+   accents.
    =================================================================== */
 
 :root {
-  --navy-900: #0b1b30;
-  --navy-800: #12294a;
-  --navy-700: #1b3a63;
-  --navy-600: #2a4d7d;
-  --brass:    #c08b3e;
-  --brass-dk: #a3722c;
-  --brass-lt: #e6c88f;
+  /* Deep end of the sky-blue scale: top bar, headings, primary buttons.
+     Dark enough to carry white text at accessible contrast. */
+  --navy-900: #07364f;   /* deepest  - top bar, login panel        */
+  --navy-800: #0b5175;   /* deep     - headings, primary button    */
+  --navy-700: #0e6f9e;   /* mid-deep - hovers, active nav          */
+  --navy-600: #1791c7;   /* mid      - links                       */
 
-  --bg:       #eef1f5;
+  /* Accent: the sky blue itself. Dark enough (4.6:1) for white text. */
+  --brass:    #0d84bd;
+  --brass-dk: #0a6a99;
+  --brass-lt: #a8dffa;   /* light tint - on dark backgrounds        */
+
+  --sky:      #38b0ee;   /* the bright note, used sparingly         */
+  --sky-soft: #dcf0fc;   /* panel tint                              */
+
+  --bg:       #eff7fc;   /* page - a light sky wash, not flat grey  */
   --surface:  #ffffff;
-  --border:   #d3dae4;
-  --border-2: #e6ebf1;
+  --border:   #cbe1ee;
+  --border-2: #e3f0f8;
 
-  --text:     #17202e;
-  --text-mid: #556579;
-  --text-dim: #8494a7;
+  --text:     #10222e;
+  --text-mid: #4a6473;
+  --text-dim: #7b98aa;
 
   --ok:       #1d7a4c;
   --ok-bg:    #e4f4eb;
@@ -28,7 +43,7 @@
   --danger-bg:#fbe9e8;
 
   --radius: 4px;
-  --shadow: 0 1px 3px rgba(11, 27, 48, 0.10);
+  --shadow: 0 1px 3px rgba(7, 54, 79, 0.10);
 }
 
 * { box-sizing: border-box; }
@@ -88,7 +103,7 @@ a { color: var(--navy-600); }
 .topbar .role-chip {
   display: inline-block;
   background: var(--brass);
-  color: var(--navy-900);
+  color: #fff;
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -213,7 +228,7 @@ a.btn { text-decoration: none; display: inline-block; }
 .btn.brass {
   background: var(--brass);
   border-color: var(--brass-dk);
-  color: var(--navy-900);
+  color: #fff;
 }
 .btn.brass:hover:not(:disabled) { background: var(--brass-dk); color: #fff; }
 
@@ -287,7 +302,7 @@ table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
 .status-draft     { background: #eef1f5; color: var(--text-mid); border-color: var(--border); }
 .status-sent      { background: var(--warn-bg); color: var(--warn); border-color: #e8d3a4; }
 .status-approved  { background: var(--ok-bg); color: var(--ok); border-color: #b6ddc6; }
-.status-converted { background: #e7edf7; color: var(--navy-700); border-color: #c2d2ea; }
+.status-converted { background: var(--sky-soft); color: var(--navy-700); border-color: #b9dcf2; }
 .status-cancelled { background: var(--danger-bg); color: var(--danger); border-color: #e8c3c0; }
 
 /* ----------------------------------------------------------- summary --- */
@@ -322,9 +337,19 @@ table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(11, 27, 48, 0.16);
-  max-height: 260px;
+  box-shadow: 0 4px 12px rgba(7, 54, 79, 0.18);
+  max-height: 320px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-dim) var(--border-2);
+}
+.autocomplete .results::-webkit-scrollbar { width: 12px; }
+.autocomplete .results::-webkit-scrollbar-track { background: var(--border-2); }
+.autocomplete .results::-webkit-scrollbar-thumb {
+  background: var(--text-dim);
+  border: 3px solid var(--border-2);
+  border-radius: 6px;
 }
 .autocomplete .results:empty { display: none; }
 .results.hidden { display: none; }
@@ -336,10 +361,23 @@ table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
   background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(11, 27, 48, 0.16);
-  max-height: 260px;
+  box-shadow: 0 4px 12px rgba(7, 54, 79, 0.18);
+  max-height: 320px;
   overflow-y: auto;
+  /* Keep the wheel inside the list instead of scrolling the page behind it. */
+  overscroll-behavior: contain;
 }
+/* A visible, grabbable scrollbar - the default is nearly invisible on
+   Windows and made the product list feel unscrollable. */
+.results.floating::-webkit-scrollbar { width: 12px; }
+.results.floating::-webkit-scrollbar-track { background: var(--border-2); }
+.results.floating::-webkit-scrollbar-thumb {
+  background: var(--text-dim);
+  border: 3px solid var(--border-2);
+  border-radius: 6px;
+}
+.results.floating::-webkit-scrollbar-thumb:hover { background: var(--navy-700); }
+.results.floating { scrollbar-width: thin; scrollbar-color: var(--text-dim) var(--border-2); }
 .results.floating div {
   padding: 7px 10px;
   cursor: pointer;
@@ -348,7 +386,7 @@ table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
 }
 .results.floating div:last-child { border-bottom: 0; }
 .results.floating div:hover,
-.results.floating div.active { background: #eef3fa; }
+.results.floating div.active { background: var(--sky-soft); }
 .results.floating .code { color: var(--text-dim); font-size: 11px; display: block; }
 
 /* Out-of-range dimension against the product's min/max. */
@@ -367,7 +405,7 @@ input.invalid:focus {
 }
 .autocomplete .results div:last-child { border-bottom: 0; }
 .autocomplete .results div:hover,
-.autocomplete .results div.active { background: #eef3fa; }
+.autocomplete .results div.active { background: var(--sky-soft); }
 .autocomplete .results .code {
   color: var(--text-dim);
   font-size: 11px;
@@ -385,13 +423,13 @@ input.invalid:focus {
 .alert.error   { background: var(--danger-bg); color: var(--danger); border-color: #e8c3c0; }
 .alert.success { background: var(--ok-bg); color: var(--ok); border-color: #b6ddc6; }
 .alert.warn    { background: var(--warn-bg); color: var(--warn); border-color: #e8d3a4; }
-.alert.info    { background: #e7edf7; color: var(--navy-700); border-color: #c2d2ea; }
+.alert.info    { background: var(--sky-soft); color: var(--navy-700); border-color: #b9dcf2; }
 .alert.hidden  { display: none; }
 
 /* Sales order / purchase order status chips reuse the quotation palette. */
 .status-confirmed     { background: var(--warn-bg); color: var(--warn); border-color: #e8d3a4; }
 .status-in_production { background: #ede7f7; color: #5b3fa0; border-color: #d3c6ea; }
-.status-delivered     { background: #e7edf7; color: var(--navy-700); border-color: #c2d2ea; }
+.status-delivered     { background: var(--sky-soft); color: var(--navy-700); border-color: #b9dcf2; }
 .status-completed     { background: var(--ok-bg); color: var(--ok); border-color: #b6ddc6; }
 .status-received      { background: var(--ok-bg); color: var(--ok); border-color: #b6ddc6; }
 .status-issued        { background: var(--warn-bg); color: var(--warn); border-color: #e8d3a4; }
@@ -527,7 +565,7 @@ tr.not-mine td:first-child::after {
   padding: 2px 7px; border: 1px solid var(--border); background: var(--surface-alt);
 }
 .slot-morning   { background: #fdf3dc; border-color: #e8d3a4; color: #8a6116; }
-.slot-afternoon { background: #e7edf7; border-color: #c2d2ea; color: var(--navy-700); }
+.slot-afternoon { background: var(--sky-soft); border-color: #b9dcf2; color: var(--navy-700); }
 .slot-evening   { background: #ede7f7; border-color: #d3c6ea; color: #5b3fa0; }
 
 /* --- which entity you are working in --- */

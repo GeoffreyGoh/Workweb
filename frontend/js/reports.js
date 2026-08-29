@@ -193,16 +193,34 @@ async function refresh() {
   }
 }
 
+/**
+ * Choosing a month is just a shortcut for "the range covering that month" -
+ * one control instead of two dates, which is how the office actually asks
+ * the question ("how did August go?").
+ */
+document.getElementById('fMonth').addEventListener('change', (e) => {
+  const value = e.target.value;                 // "2026-08"
+  if (!value) return;
+  const [year, month] = value.split('-').map(Number);
+  const last = new Date(year, month, 0).getDate();
+  range.date_from = `${value}-01`;
+  range.date_to = `${value}-${String(last).padStart(2, '0')}`;
+  document.getElementById('fFrom').value = range.date_from;
+  document.getElementById('fTo').value = range.date_to;
+  refresh();
+});
+
 document.getElementById('applyBtn').addEventListener('click', () => {
   range.date_from = document.getElementById('fFrom').value;
   range.date_to = document.getElementById('fTo').value;
+  document.getElementById('fMonth').value = '';   // an explicit range wins
   range.created_by = document.getElementById('fUser').value;
   range.company_id = document.getElementById('fCompany').value;
   refresh();
 });
 
 document.getElementById('clearBtn').addEventListener('click', () => {
-  ['fFrom', 'fTo', 'fCustomer'].forEach((id) => {
+  ['fFrom', 'fTo', 'fCustomer', 'fMonth'].forEach((id) => {
     document.getElementById(id).value = '';
   });
   document.getElementById('fUser').value = '';

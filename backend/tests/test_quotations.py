@@ -2,6 +2,8 @@
 
 from datetime import date
 
+import pytest
+
 from conftest import dec
 
 
@@ -195,13 +197,42 @@ class TestUpdate:
                              json={"customer_id": q["customer_id"], "items": []}).json()
         assert updated["quotation_no"] == q["quotation_no"]
 
-    def test_only_drafts_are_editable(self, client, budi, make_quotation):
+    def test_a_sent_quotation_is_still_editable(self, client, budi, make_quotation,
+                                                products):
+        """A sent quotation is still being negotiated - the customer asks for a
+        different fabric and the same document is revised."""
         q = make_quotation(budi)
         client.patch(f"/quotations/{q['id']}/status", json={"status": "sent"}, headers=budi)
-        response = client.put(f"/quotations/{q['id']}", headers=budi,
+
+        response = client.put(f"/quotations/{q['id']}", headers=budi, json={
+            "customer_id": q["customer_id"], "discount_percent": 0, "ppn_percent": 0,
+            "items": [{"product_id": products["unit"].id, "quantity": 3}]})
+        assert response.status_code == 200
+        assert dec(response.json()["total"]) == dec("150000.00")
+
+    def test_revising_a_sent_quotation_keeps_it_sent(self, client, budi,
+                                                     make_quotation):
+        q = make_quotation(budi)
+        client.patch(f"/quotations/{q['id']}/status", json={"status": "sent"}, headers=budi)
+        updated = client.put(f"/quotations/{q['id']}", headers=budi,
+                             json={"customer_id": q["customer_id"], "items": []}).json()
+        assert updated["status"] == "sent"
+        assert updated["quotation_no"] == q["quotation_no"]
+
+    @pytest.mark.parametrize("status", ["approved", "converted", "cancelled"])
+    def test_locked_once_it_leaves_negotiation(self, client, budi, admin, db,
+                                               make_quotation, status):
+        """Past 'sent' a sales order may depend on the figures, so it locks."""
+        import models
+        q = make_quotation(budi)
+        db.query(models.Quotation).filter(models.Quotation.id == q["id"]).update(
+            {"status": status})
+        db.commit()
+
+        response = client.put(f"/quotations/{q['id']}", headers=admin,
                               json={"customer_id": q["customer_id"], "items": []})
         assert response.status_code == 409
-        assert "draft" in response.json()["detail"]
+        assert "no longer be edited" in response.json()["detail"]
 
     def test_editing_a_missing_quotation_is_404(self, client, budi, customer):
         response = client.put("/quotations/9999", headers=budi,

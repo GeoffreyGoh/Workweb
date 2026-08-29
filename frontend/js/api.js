@@ -398,7 +398,17 @@ function attachAutocomplete({
   };
 
   if (floating) {
-    window.addEventListener('scroll', close, true);
+    window.addEventListener(
+      'scroll',
+      (event) => {
+        // Capture phase catches scrolling anywhere - including inside this
+        // dropdown. Closing on that made the product list impossible to
+        // scroll with the wheel, so ignore its own scroll events.
+        if (event.target === resultsEl || resultsEl.contains(event.target)) return;
+        close();
+      },
+      true
+    );
     window.addEventListener('resize', close);
   }
 
@@ -415,7 +425,12 @@ function attachAutocomplete({
   }, 220);
 
   input.addEventListener('input', run);
-  input.addEventListener('focus', run);
+  input.addEventListener('focus', () => {
+    // Only re-search when the list is actually closed. Re-running on every
+    // focus would redraw the rows and throw away the user's scroll position
+    // the moment focus returns after dragging the scrollbar.
+    if (resultsEl.classList.contains('hidden')) run();
+  });
 
   input.addEventListener('keydown', (event) => {
     if (resultsEl.classList.contains('hidden') || !rows.length) return;
@@ -445,7 +460,50 @@ function attachAutocomplete({
     close();
   });
 
-  input.addEventListener('blur', () => setTimeout(close, 150));
+  /**
+   * Is the pointer over the dropdown?
+   *
+   * Deliberately geometric rather than `resultsEl.contains(event.target)`:
+   * pressing an element's scrollbar does not reliably report that element as
+   * the event target, so a target-based check treats a scrollbar drag as a
+   * click outside and dismisses the list - which is exactly what made the
+   * product list impossible to scroll.
+   */
+  const pointerOverList = (event) => {
+    if (resultsEl.classList.contains('hidden')) return false;
+    const r = resultsEl.getBoundingClientRect();
+    return (
+      event.clientX >= r.left &&
+      event.clientX <= r.right &&
+      event.clientY >= r.top &&
+      event.clientY <= r.bottom
+    );
+  };
+
+  // Dragging the scrollbar also blurs the input, so hold the list open for
+  // the duration of the drag.
+  let grabbing = false;
+
+  document.addEventListener('mousedown', (event) => {
+    if (pointerOverList(event)) {
+      grabbing = true;
+    } else if (event.target !== input) {
+      close();
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!grabbing) return;
+    grabbing = false;
+    // Hand focus back so the arrow keys keep working after a scroll.
+    if (!resultsEl.classList.contains('hidden')) input.focus();
+  });
+
+  input.addEventListener('blur', () =>
+    setTimeout(() => {
+      if (!grabbing) close();
+    }, 150)
+  );
 
   return { close };
 }

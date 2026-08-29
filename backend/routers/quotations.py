@@ -19,7 +19,11 @@ from database import get_db
 
 router = APIRouter(prefix="/quotations", tags=["quotations"])
 
-EDITABLE_STATUSES = {"draft"}
+# A sent quotation is still negotiable - the customer asks for a different
+# fabric or another window, and the same document is revised and re-sent.
+# Once it is approved or converted a sales order depends on the figures, so
+# it locks.
+EDITABLE_STATUSES = {"draft", "sent"}
 
 # Where a quotation may go next. 'converted' is terminal - the Sales Order
 # module owns it from that point on.
@@ -217,7 +221,10 @@ def update_quotation(
     if quotation.status not in EDITABLE_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"Only draft quotations can be edited (this one is '{quotation.status}')",
+            detail=(
+                f"A '{quotation.status}' quotation can no longer be edited. "
+                "Only draft and sent quotations are still open for changes."
+            ),
         )
 
     customer = db.get(models.Customer, payload.customer_id)

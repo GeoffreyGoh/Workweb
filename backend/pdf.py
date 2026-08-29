@@ -40,13 +40,15 @@ def identity(document):
     if company is None:
         return dict(FALLBACK_COMPANY), list(FALLBACK_TERMS), logo_file()
 
-    details = dict(FALLBACK_COMPANY)
-    for field in ("name", "tagline", "address", "city", "phone", "email",
-                  "website", "npwp", "bank_name", "bank_account", "bank_holder",
-                  "signatory"):
-        value = getattr(company, field, None)
-        if value:
-            details[field] = value
+    # The company row is authoritative. Merging it over the placeholder
+    # defaults would mean that clearing an unknown NPWP silently reprints the
+    # sample one - a fake tax number on a real invoice is worse than none.
+    details = {
+        field: (getattr(company, field, None) or "")
+        for field in ("name", "tagline", "address", "city", "phone", "email",
+                      "website", "npwp", "bank_name", "bank_account",
+                      "bank_holder", "signatory")
+    }
 
     terms = list(FALLBACK_TERMS)
     if company.quotation_terms:
@@ -149,12 +151,20 @@ def letterhead(company=None, logo=None):
     else:
         left = Paragraph(_esc(company["name"]), S["company"])
 
-    right = Paragraph(
-        f"{_esc(company['address'])}<br/>{_esc(company['city'])}<br/>"
-        f"Tel {_esc(company['phone'])} &nbsp;|&nbsp; {_esc(company['email'])}<br/>"
-        f"NPWP {_esc(company['npwp'])}",
-        S["small"],
-    )
+    # Blank fields are omitted rather than printed as empty labels: a line
+    # reading "Tel" with no number looks like a fault on a customer document.
+    lines = [_esc(company.get("address")), _esc(company.get("city"))]
+    contact = []
+    if company.get("phone"):
+        contact.append(f"Tel {_esc(company['phone'])}")
+    if company.get("email"):
+        contact.append(_esc(company["email"]))
+    if contact:
+        lines.append(" &nbsp;|&nbsp; ".join(contact))
+    if company.get("npwp"):
+        lines.append(f"NPWP {_esc(company['npwp'])}")
+
+    right = Paragraph("<br/>".join(line for line in lines if line), S["small"])
 
     header = Table([[left, right]], colWidths=[95 * mm, 75 * mm])
     header.setStyle(
@@ -168,7 +178,7 @@ def letterhead(company=None, logo=None):
     )
 
     parts = [header]
-    if logo:
+    if logo and company.get("tagline"):
         parts.append(Paragraph(_esc(company["tagline"]), S["tagline"]))
 
     rule = Table([[""]], colWidths=[170 * mm], rowHeights=[2])
@@ -309,7 +319,10 @@ def _footer(canvas, doc, company=None):
     canvas.line(20 * mm, 15 * mm, 190 * mm, 15 * mm)
     canvas.setFont("Helvetica", 6.5)
     canvas.setFillColor(GREY)
-    canvas.drawString(20 * mm, 11 * mm, f"{company['name']} | {company['website']}")
+    footer_text = company["name"]
+    if company.get("website"):
+        footer_text += f" | {company['website']}"
+    canvas.drawString(20 * mm, 11 * mm, footer_text)
     canvas.drawRightString(190 * mm, 11 * mm, f"Page {canvas.getPageNumber()}")
     canvas.restoreState()
 
@@ -504,14 +517,15 @@ def quotation_pdf(quotation) -> bytes:
         Spacer(1, 2),
         Paragraph(terms, S["terms"]),
         Spacer(1, 4),
-        Paragraph(
-            f"<b>Payment to:</b> {_esc(company['bank_name'])} &nbsp;|&nbsp; "
-            f"A/C {_esc(company['bank_account'])} &nbsp;|&nbsp; "
-            f"a.n. {_esc(company['bank_holder'])}",
-            S["terms"],
-        ),
-        Spacer(1, 12),
     ]
+
+    if company.get("bank_account"):
+        bank = [f"<b>Payment to:</b> {_esc(company['bank_name'])}"]
+        bank.append(f"A/C {_esc(company['bank_account'])}")
+        if company.get("bank_holder"):
+            bank.append(f"a.n. {_esc(company['bank_holder'])}")
+        story.append(Paragraph(" &nbsp;|&nbsp; ".join(bank), S["terms"]))
+    story.append(Spacer(1, 12))
     story.append(KeepTogether(
         signature_block("Customer Acceptance", f"For and on behalf of {company['name']}",
                         company["signatory"])

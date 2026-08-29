@@ -15,38 +15,31 @@ import models
 from database import Base, engine, SessionLocal
 
 COMPANIES = [
-    dict(code="GB", name="PT Graha Blinds Nusantara",
-         tagline="Blinds, Curtains & Window Furnishings",
-         address="Jl. Contoh Alamat No. 123, Kecamatan", city="Jakarta 12345, Indonesia",
-         phone="+62 21 1234 5678", email="sales@grahablinds.co.id",
-         website="www.grahablinds.co.id", npwp="01.111.111.1-111.000",
-         bank_name="Bank Central Asia (BCA)", bank_account="1234567890",
-         bank_holder="PT Graha Blinds Nusantara", signatory="Sales Manager",
-         logo_filename="logo_GB.png"),
-    dict(code="MJ", name="PT Mitra Jendela Indah",
-         tagline="Window Solutions for Every Space",
-         address="Jl. Raya Serpong KM 8 No. 45", city="Tangerang 15310, Indonesia",
-         phone="+62 21 5390 088", email="info@mitrajendela.co.id",
-         website="www.mitrajendela.co.id", npwp="02.222.222.2-222.000",
-         bank_name="Bank Mandiri", bank_account="9876543210",
-         bank_holder="PT Mitra Jendela Indah", signatory="Sales Manager",
-         logo_filename="logo_MJ.png"),
-    dict(code="AI", name="CV Anugerah Interior",
-         tagline="Custom Interior & Soft Furnishings",
-         address="Jl. Diponegoro No. 77", city="Semarang 50241, Indonesia",
-         phone="+62 24 8412 345", email="admin@anugerahinterior.co.id",
-         website="www.anugerahinterior.co.id", npwp="03.333.333.3-333.000",
-         bank_name="Bank Negara Indonesia (BNI)", bank_account="5566778899",
-         bank_holder="CV Anugerah Interior", signatory="Direktur",
-         logo_filename="logo_AI.png"),
+    # Three legal entities. Two of them trade under the Accent brand, so they
+    # share a logo and are told apart by their address and bank account.
+    dict(code="TRI", name="PT TRIRATNA DAMAI SEJAHTERA",
+         address="Jl. Tambora IV No. 31", city="Jakarta Barat",
+         bank_name="BCA - Cab. Ricci", bank_account="644 0495 859",
+         bank_holder="PT TRIRATNA DAMAI SEJAHTERA",
+         logo_filename="accent.jpeg"),
+    dict(code="MIL", name="MILIE INTERIOR",
+         address="Jl. Tambora IV No. 31", city="Jakarta Barat",
+         bank_name="BCA - Cab. Ricci", bank_account="644 0699 128",
+         bank_holder="Tshin Mymy Wongso",
+         logo_filename="milie.jpeg"),
+    dict(code="ACC", name="PT ACCENT JENDELA INDONESIA",
+         address="Ruko Demansion Blok D9", city="Alam Sutera",
+         bank_name="BCA - Cab. Ricci", bank_account="644 0856 789",
+         bank_holder="PT ACCENT JENDELA INDONESIA",
+         logo_filename="accent.jpeg"),
 ]
 
 # (username, full name, password, role, default company code)
 USERS = [
-    ("admin", "Administrator", "admin123", "admin", "GB"),
-    ("budi", "Budi Santoso", "budi123", "user", "GB"),
-    ("sari", "Sari Dewi", "sari123", "user", "MJ"),
-    ("agus", "Agus Prasetyo", "agus123", "user", "AI"),
+    ("admin", "Administrator", "admin123", "admin", "TRI"),
+    ("budi", "Budi Santoso", "budi123", "user", "ACC"),
+    ("sari", "Sari Dewi", "sari123", "user", "MIL"),
+    ("agus", "Agus Prasetyo", "agus123", "user", "TRI"),
 ]
 
 SUPPLIERS = [
@@ -296,10 +289,10 @@ def seed(with_demo: bool = False, reset: bool = False):
         for company in db.query(models.Company).order_by(models.Company.code).all():
             print(f"  {company.code}: {company.name}")
         print()
-        print("  admin / admin123   (admin, GB - can edit anyone's documents)")
-        print("  budi  / budi123    (user, GB - can edit only their own)")
-        print("  sari  / sari123    (user, MJ)")
-        print("  agus  / agus123    (user, AI)")
+        print("  admin / admin123   (admin, TRI - can edit anyone's documents)")
+        print("  budi  / budi123    (user, ACC - can edit only their own)")
+        print("  sari  / sari123    (user, MIL)")
+        print("  agus  / agus123    (user, TRI)")
     finally:
         db.close()
 

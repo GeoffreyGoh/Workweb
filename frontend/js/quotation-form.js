@@ -3,6 +3,10 @@
    Line items are handled by the shared editor in line-editor.js.
    ===================================================================== */
 
+// Mirrors EDITABLE_STATUSES in routers/quotations.py: a sent quotation is
+// still being negotiated, so it stays open for revision until it is approved.
+const EDITABLE_STATUSES = ['draft', 'sent'];
+
 const state = {
   id: null,
   status: 'draft',
@@ -175,7 +179,8 @@ function buildPayload() {
   };
 }
 
-const ACTION_BUTTONS = ['saveBtn', 'sendBtn', 'approveBtn', 'convertBtn', 'pdfBtn', 'cancelBtn'];
+const ACTION_BUTTONS = ['saveBtn', 'sendBtn', 'resendBtn', 'approveBtn',
+                        'convertBtn', 'pdfBtn', 'cancelBtn'];
 
 async function save({ silent = false } = {}) {
   clearAlerts();
@@ -219,6 +224,22 @@ el('saveBtn').addEventListener('click', () => save());
 el('sendBtn').addEventListener('click', async () => {
   if (state.status === 'draft' && state.id) await save({ silent: true });
   changeStatus('sent', 'sent');
+});
+
+/** Save the revision and stamp a fresh follow-up date on the same document. */
+el('resendBtn').addEventListener('click', async () => {
+  const saved = await save({ silent: true });
+  if (!saved) return;
+  try {
+    await api.updateQuotation(state.id, {
+      ...buildPayload(),
+      last_follow_up: todayISO(),
+    });
+    applyQuotation(await api.getQuotation(state.id));
+    showSuccess(t('quotation.revised'));
+  } catch (err) {
+    showError(err.message);
+  }
 });
 
 el('approveBtn').addEventListener('click', () => changeStatus('approved', 'approved'));
@@ -296,7 +317,7 @@ function applyQuotation(q) {
   el('ownerNote').textContent = q.created_by_name ? `Created by ${q.created_by_name}` : '';
   document.title = `${q.quotation_no} · Q2O`;
 
-  setReadonly(q.status !== 'draft' || !mayEdit());
+  setReadonly(!EDITABLE_STATUSES.includes(q.status) || !mayEdit());
   state.editor.recalc();
 
   // Server totals are authoritative - show them, not the local preview.
@@ -334,8 +355,9 @@ function updateActions() {
   const status = state.status;
   const editable = mayEdit();
 
-  show('saveBtn', status === 'draft' && editable);
+  show('saveBtn', EDITABLE_STATUSES.includes(status) && editable);
   show('sendBtn', status === 'draft' && editable);
+  show('resendBtn', status === 'sent' && editable);
   show('approveBtn', status === 'sent' && editable);
   show('convertBtn', ['sent', 'approved'].includes(status) && Boolean(state.id));
   show('pdfBtn', Boolean(state.id));
