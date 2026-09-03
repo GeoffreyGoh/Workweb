@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Surat Jalan &middot; Q2O</title>
+  <title>Delivery Note &middot; Q2O</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -12,11 +12,11 @@
 
   <div class="page">
     <div class="page-head">
-      <h1 id="pageTitle">Surat Jalan</h1>
+      <h1 id="pageTitle" data-i18n="sj.no">Delivery Note</h1>
       <span id="statusBadge"></span>
       <span class="hint" id="ownerNote"></span>
       <div class="spacer"></div>
-      <a class="btn" href="delivery-notes.html">Back to list</a>
+      <a class="btn" href="delivery-notes.html" data-i18n="common.back">Back to list</a>
     </div>
 
     <div class="alert error hidden" id="error"></div>
@@ -25,11 +25,11 @@
     <div class="alert info" id="orderLink" style="display:none"></div>
 
     <div class="card">
-      <header data-i18n="quotation.details">Delivery Details</header>
+      <header data-i18n="sj.details">Delivery Details</header>
       <div class="body">
         <div class="grid">
           <div class="field">
-            <label for="sjNo" data-i18n="sj.no">Surat Jalan #</label>
+            <label for="sjNo" data-i18n="sj.no">Delivery Note #</label>
             <input type="text" id="sjNo" readonly>
           </div>
           <div class="field">
@@ -47,12 +47,13 @@
           </div>
 
           <div class="field">
-            <label for="vehicleNo" data-i18n="sj.vehicle">Vehicle / No. Polisi</label>
+            <label for="vehicleNo" data-i18n="sj.vehicle">Vehicle Number</label>
             <input type="text" id="vehicleNo" placeholder="B 1234 XYZ">
           </div>
           <div class="field">
-            <label for="driverName" data-i18n="sj.driver">Driver / Pengemudi</label>
-            <input type="text" id="driverName" placeholder="Name of driver">
+            <label for="driverName" data-i18n="sj.driver">Driver</label>
+            <input type="text" id="driverName" placeholder="Name of driver"
+                   data-i18n-placeholder="sj.driverNameHint">
           </div>
 
           <div class="field col-2">
@@ -60,18 +61,19 @@
             <input type="text" id="deliverTo">
           </div>
           <div class="field col-2">
-            <label for="phone">Contact Phone</label>
+            <label for="phone" data-i18n="sj.contactPhone">Contact Phone</label>
             <input type="text" id="phone">
           </div>
 
           <div class="field col-4">
-            <label for="deliverAddress">Delivery Address</label>
+            <label for="deliverAddress" data-i18n="sj.deliverAddress">Delivery Address</label>
             <textarea id="deliverAddress"></textarea>
           </div>
 
           <div class="field col-4">
-            <label for="notes">Notes / Catatan</label>
-            <textarea id="notes" placeholder="Printed on the Surat Jalan"></textarea>
+            <label for="notes" data-i18n="common.notes">Notes</label>
+            <textarea id="notes" placeholder="Printed on the delivery note"
+                      data-i18n-placeholder="sj.notesHint"></textarea>
           </div>
         </div>
       </div>
@@ -79,9 +81,9 @@
 
     <div class="card">
       <header>
-        Goods to Deliver
+        <span data-i18n="sj.goods">Goods to Deliver</span>
         <div class="spacer"></div>
-        <span class="hint">Quantities are capped at what is still outstanding on the order</span>
+        <span class="hint" data-i18n="sj.capHint">Quantities are capped at what is still outstanding on the invoice</span>
       </header>
 
       <div class="table-wrap">
@@ -91,7 +93,7 @@
               <th style="width:34px">#</th>
               <th style="min-width:240px" data-i18n="common.product">Product</th>
               <th style="min-width:150px" data-i18n="common.description">Description</th>
-              <th class="right" style="width:110px">Size (cm)</th>
+              <th class="right" style="width:110px" data-i18n="sj.size">Size (cm)</th>
               <th class="right" style="width:90px" data-i18n="sj.ordered">Ordered</th>
               <th class="right" style="width:110px" data-i18n="sj.alreadySent">Already Sent</th>
               <th class="right" style="width:110px" data-i18n="sj.outstanding">Outstanding</th>
@@ -105,7 +107,7 @@
 
       <div class="body">
         <div class="summary">
-          <div class="row total"><span>Total Barang</span><span id="sumQty">0</span></div>
+          <div class="row total"><span data-i18n="sj.totalItems">Total Items</span><span id="sumQty">0</span></div>
         </div>
       </div>
     </div>
@@ -115,11 +117,12 @@
       <div class="body">
         <div class="grid">
           <div class="field">
-            <label for="receivedBy">Signed for by</label>
-            <input type="text" id="receivedBy" placeholder="Name of recipient">
+            <label for="receivedBy" data-i18n="sj.signedBy">Signed for by</label>
+            <input type="text" id="receivedBy" placeholder="Name of recipient"
+                   data-i18n-placeholder="sj.recipientHint">
           </div>
           <div class="field">
-            <label for="receivedAt">Date received</label>
+            <label for="receivedAt" data-i18n="sj.receivedAt">Date received</label>
             <input type="date" id="receivedAt">
           </div>
         </div>
@@ -129,11 +132,11 @@
     <div class="card">
       <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
         <button class="btn primary" id="saveBtn" type="button" data-i18n="common.save">Save</button>
-        <button class="btn brass" id="issueBtn" type="button">Issue &amp; Print</button>
+        <button class="btn brass" id="issueBtn" type="button" data-i18n="sj.issue">Issue &amp; Print</button>
         <button class="btn" id="deliveredBtn" type="button" data-i18n="so.markDelivered">Mark Delivered</button>
-        <button class="btn" id="pdfBtn" type="button">Surat Jalan PDF</button>
+        <button class="btn" id="pdfBtn" type="button" data-i18n="sj.pdf">Delivery Note PDF</button>
         <div class="spacer" style="flex:1"></div>
-        <button class="btn danger" id="cancelBtn" type="button">Cancel Surat Jalan</button>
+        <button class="btn danger" id="cancelBtn" type="button" data-i18n="sj.cancelNote">Cancel Delivery Note</button>
       </div>
     </div>
   </div>

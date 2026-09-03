@@ -410,7 +410,7 @@ function updateActions() {
   el('orderDate').value = todayISO();
   el('statusBadge').innerHTML = statusBadge('draft');
 
-  // Arrived here from "Raise Purchase Order" on a sales order.
+  // Arrived here from "Raise Purchase Order" on an invoice.
   const soId = params.get('sales_order_id');
   if (soId) {
     try {

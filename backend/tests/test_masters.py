@@ -118,7 +118,7 @@ class TestCustomers:
 class TestNumbering:
     def test_prefix_map(self):
         assert numbering.PREFIXES == {
-            "quotation": "Q", "sales_order": "SO",
+            "quotation": "Q", "sales_order": "INV",
             "purchase_order": "PO", "receipt": "RCP",
             "delivery_note": "SJ",
         }
@@ -159,7 +159,7 @@ class TestNumbering:
                                                        make_purchase_order):
         month = f"{date.today():%Y%m}"
         assert make_quotation(budi)["quotation_no"] == f"Q-GB-{month}-001"
-        assert make_sales_order(budi)["so_no"] == f"SO-GB-{month}-001"
+        assert make_sales_order(budi)["so_no"] == f"INV-GB-{month}-001"
         assert make_purchase_order(budi)["po_no"] == f"PO-GB-{month}-001"
 
     def test_a_malformed_existing_number_does_not_crash(self, db, customer, companies):

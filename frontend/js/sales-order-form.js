@@ -1,5 +1,5 @@
 /* =====================================================================
-   Sales order create / edit, with the receipts panel attached.
+   Invoice create / edit, with the receipts panel attached.
    ===================================================================== */
 
 const state = {
@@ -192,7 +192,7 @@ el('productionBtn').addEventListener('click', () => changeStatus('in_production'
 el('deliveredBtn').addEventListener('click', () => changeStatus('delivered', 'delivered'));
 el('completeBtn').addEventListener('click', () => changeStatus('completed', 'completed'));
 el('cancelBtn').addEventListener('click', () => {
-  if (confirm('Cancel this sales order?')) changeStatus('cancelled', 'cancelled');
+  if (confirm('Cancel this invoice?')) changeStatus('cancelled', 'cancelled');
 });
 
 el('pdfBtn').addEventListener('click', async () => {
@@ -371,6 +371,55 @@ el('splitPoBtn').addEventListener('click', async () => {
   }
 });
 
+/* ------------------------------------- closing pembayaran piutang */
+
+el('closeArBtn').addEventListener('click', async () => {
+  clearAlerts();
+  if (!confirm(t('ar.confirmClose'))) return;
+  try {
+    await applyOrder(await api.closeReceivable(state.id, {
+      note: orNull(el('closeNote').value),
+    }));
+    showSuccess(`${state.soNo}: ${t('ar.closed')}.`);
+  } catch (err) {
+    showError(err.message);
+  }
+});
+
+el('reopenArBtn').addEventListener('click', async () => {
+  clearAlerts();
+  try {
+    await applyOrder(await api.reopenReceivable(state.id));
+    showSuccess(`${state.soNo} reopened.`);
+  } catch (err) {
+    showError(err.message);
+  }
+});
+
+/** The panel only makes sense on a live invoice that owes, or is closed. */
+function updateReceivable(so) {
+  const card = el('receivableCard');
+  const live = !['draft', 'cancelled'].includes(so.status);
+  card.style.display = live ? '' : 'none';
+  if (!live) return;
+
+  const closed = so.is_closed;
+  const settled = Number(so.balance_due) === 0;
+  el('closeNote').value = so.receivable_close_note || '';
+  el('closeNote').disabled = closed;
+  el('closeArBtn').style.display = closed ? 'none' : '';
+  el('closeArBtn').disabled = !settled || !mayEdit();
+  el('reopenArBtn').style.display = closed ? '' : 'none';
+  el('reopenArBtn').disabled = !mayEdit();
+
+  el('receivableState').textContent = closed
+    ? `${t('ar.closedOn')} ${fmtDate(so.receivable_closed_at)}` +
+      (so.receivable_closed_by_name ? ` — ${so.receivable_closed_by_name}` : '')
+    : settled
+      ? `${t('ar.settled')}: ${so.currency} 0`
+      : `${t('ar.open')}: ${so.currency} ${fmtMoney(so.balance_due, so.currency)}`;
+}
+
 el('newSjBtn').addEventListener('click', () => {
   window.location.href = `delivery-note-form.html?sales_order_id=${state.id}`;
 });
@@ -415,7 +464,7 @@ async function applyOrder(so) {
   state.editor.clear();
   (so.items || []).forEach((item) => state.editor.addRow(item));
 
-  el('pageTitle').textContent = `Sales Order ${so.so_no}`;
+  el('pageTitle').textContent = `Invoice ${so.so_no}`;
   el('statusBadge').innerHTML = statusBadge(so.status);
   el('ownerNote').textContent = so.created_by_name ? `Created by ${so.created_by_name}` : '';
   document.title = `${so.so_no} · Q2O`;
@@ -453,6 +502,7 @@ async function applyOrder(so) {
   el('receiptsCard').style.display = isLive ? '' : 'none';
   el('addReceiptBtn').style.display = state.balance > 0 ? '' : 'none';
   el('deliveryCard').style.display = isLive ? '' : 'none';
+  updateReceivable(so);
   if (isLive) {
     await loadReceipts();
     await loadDeliveries();
@@ -493,7 +543,7 @@ function updateActions() {
   const locked = el('lockedNote');
   if (saved && !editable) {
     locked.textContent =
-      'Read-only: this sales order belongs to another user. An admin can change it.';
+      'Read-only: this invoice belongs to another user. An admin can change it.';
     locked.style.display = '';
   } else {
     locked.style.display = 'none';

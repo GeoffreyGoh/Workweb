@@ -21,11 +21,11 @@ router = APIRouter(prefix="/quotations", tags=["quotations"])
 
 # A sent quotation is still negotiable - the customer asks for a different
 # fabric or another window, and the same document is revised and re-sent.
-# Once it is approved or converted a sales order depends on the figures, so
+# Once it is approved or converted an invoice depends on the figures, so
 # it locks.
 EDITABLE_STATUSES = {"draft", "sent"}
 
-# Where a quotation may go next. 'converted' is terminal - the Sales Order
+# Where a quotation may go next. 'converted' is terminal - the Invoice
 # module owns it from that point on.
 ALLOWED_TRANSITIONS = {
     "draft": {"sent", "cancelled"},
@@ -312,7 +312,7 @@ def delete_quotation(
         models.SalesOrder.quotation_id == quotation_id
     ).first():
         raise HTTPException(
-            status_code=409, detail="A sales order was raised from this quotation"
+            status_code=409, detail="An invoice was raised from this quotation"
         )
     db.delete(quotation)
     db.commit()

@@ -115,7 +115,7 @@ class TestCreateFromOrder:
         response = client.post(f"/delivery-notes/from-sales-order/{so['id']}",
                                headers=budi)
         assert response.status_code == 409
-        assert "Confirm the sales order" in response.json()["detail"]
+        assert "Confirm the invoice" in response.json()["detail"]
 
     def test_a_cancelled_order_cannot_be_delivered(self, client, budi, order):
         client.patch(f"/sales-orders/{order['id']}/status",
@@ -177,7 +177,7 @@ class TestOverDeliveryGuard:
             "sales_order_id": order["id"],
             "items": [{"sales_order_item_id": stranger, "quantity": 1}]})
         assert response.status_code == 422
-        assert "not on sales order" in response.json()["detail"]
+        assert "not on invoice" in response.json()["detail"]
 
     def test_zero_quantity_is_rejected(self, client, budi, order):
         ids = line_ids(client, budi, order["id"])

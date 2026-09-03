@@ -1,4 +1,4 @@
-/* Receipts list. New payments are recorded from the sales order they
+/* Receipts list. New payments are recorded from the invoice they
    belong to, so this page is a register plus PDF reprints. */
 
 const filters = { company_id: '', q: '', date_from: '', date_to: '' };
@@ -26,7 +26,7 @@ async function load() {
 
     if (!list.length) {
       rowsEl.innerHTML =
-        '<tr><td colspan="9" class="empty">No receipts yet. Record a payment from a confirmed sales order.</td></tr>';
+        '<tr><td colspan="9" class="empty">No receipts yet. Record a payment from a confirmed invoice.</td></tr>';
       document.getElementById('totalNote').textContent = '';
       return;
     }

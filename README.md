@@ -3,7 +3,7 @@
 Internal web app for a blinds/curtain company, replacing the legacy desktop ERP.
 Staff only, 5–10 users.
 
-**Flow:** Quotation → Sales Order → Purchase Order (materials) → Surat Jalan
+**Flow:** Quotation → Invoice → Purchase Order (materials) → Surat Jalan
 (delivery) → Receipt (payment) → Sales & Financial reports. Every document prints
 to a PDF on company letterhead.
 
@@ -107,8 +107,8 @@ product catalogue** — roller, venetian and vertical blinds, curtains and roman
 shades, tracks and rods, motorisation, and services. It is safe to re-run;
 records are matched on their code and existing ones are left alone.
 
-`--demo` additionally runs `demo_data.py`, which builds **17 quotations, 11 sales
-orders, 21 purchase orders, 9 Surat Jalan and 14 receipts** spread over the last
+`--demo` additionally runs `demo_data.py`, which builds **17 quotations, 11
+invoices, 21 purchase orders, 9 Surat Jalan and 14 receipts** spread over the last
 ten months, so every screen and both reports have something to show.
 
 The demo documents are built through the real `pricing.py` and `numbering.py`
@@ -120,7 +120,7 @@ It deliberately includes the awkward cases you want to see on screen:
 
 - quotations in every status, including one cancelled and one that stalled at *sent*
 - orders from *draft* through to *completed*, spread across all four users
-- **a partially delivered order** (SO with roughly half its goods still outstanding)
+- **a partially delivered order** (an invoice with roughly half its goods still outstanding)
 - one order delivered over **two separate trips**
 - part-paid orders, so the receivables figure is not zero
 - purchase orders for stock and packaging that are **not** linked to any order,
@@ -146,7 +146,7 @@ suppliers and the staff. What is **not** shared:
   changing it would leave the number lying.
 
 A user picks the issuing company on a new quotation; their own company is
-pre-selected. Sales orders, purchase orders, Surat Jalan and receipts all inherit
+pre-selected. Invoices, purchase orders, Surat Jalan and receipts all inherit
 the company of the document they come from, so nothing has to be chosen twice.
 
 Every list, both reports and the delivery schedule take a **company filter**, and
@@ -190,7 +190,7 @@ landscape, scaled to 16 mm tall. Without one the company name is set in type.
 | Endpoint | Produces |
 |----------|----------|
 | `GET /documents/quotations/{id}.pdf` | Sales Quotation with product table, dimensions, discount, PPN, terms, signature block |
-| `GET /documents/sales-orders/{id}.pdf` | Sales Order |
+| `GET /documents/sales-orders/{id}.pdf` | Invoice |
 | `GET /documents/purchase-orders/{id}.pdf` | Purchase Order to the supplier |
 | `GET /documents/delivery-notes/{id}.pdf` | Surat Jalan, with sizes and a three-way sign-off |
 | `GET /documents/receipts/{id}.pdf` | Receipt / Kwitansi, amount spelled out in Indonesian |
@@ -207,7 +207,7 @@ backend/
   database.py     engine/session; SQLite by default
   auth.py         JWT, hashing, get_current_user, require_role, ownership rule
   pricing.py      line pricing, dimension validation, totals
-  numbering.py    Q-/SO-/PO-/RCP-YYYYMM-### allocation
+  numbering.py    Q-/INV-/PO-/RCP-/SJ-YYYYMM-### allocation
   company.py      >>> your letterhead details <<<
   pdf.py          ReportLab templates + terbilang (rupiah in words)
   schemas.py      Pydantic models
@@ -218,13 +218,14 @@ backend/
 frontend/
   login.html
   quotations.html / quotation-form.html
-  sales-orders.html / sales-order-form.html      (receipts panel lives here)
+  sales-orders.html / sales-order-form.html      (receipts + receivable panel)
+  statement.html                                 per-customer statement
   purchase-orders.html / purchase-order-form.html
   receipts.html
   reports.html
   css/app.css
   js/api.js          fetch wrapper, formatting, autocomplete, PDF opener
-  js/line-editor.js  shared line-item table (quotations + sales orders)
+  js/line-editor.js  shared line-item table (quotations + invoices)
   js/*.js            one per page
 ```
 
@@ -236,7 +237,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-504 tests, ~25 seconds. Each one runs against a fresh in-memory SQLite schema,
+540 tests, ~25 seconds. Each one runs against a fresh in-memory SQLite schema,
 so tests never see each other's rows and document numbering always starts at 001.
 
 | File | Covers |
@@ -246,6 +247,7 @@ so tests never see each other's rows and document numbering always starts at 001
 | `test_permissions.py` | shared visibility, the owner-vs-admin edit rule on every document |
 | `test_quotations.py` | totals, validation, numbering, editing, status flow, filters |
 | `test_sales_orders.py` | conversion fidelity, lifecycle guards, payment tracking |
+| `test_receivables.py` | closing/reopening a receivable, the customer statement |
 | `test_purchase_orders.py` | material lines, SO linking, supplier master |
 | `test_delivery_notes.py` | partial deliveries, the over-delivery cap, quantity release |
 | `test_receipts.py` | overpayment, draft-order and void guards |
@@ -291,8 +293,8 @@ Purchase orders carry no trade discount: `subtotal → PPN → total`.
 
 ## Surat Jalan (delivery notes)
 
-The document that travels with the goods. Raised from a confirmed sales order via
-**Create Surat Jalan** on the order page, which drafts one for everything still
+The document that travels with the goods. Raised from a confirmed invoice via
+**Create Surat Jalan** on the invoice page, which drafts one for everything still
 outstanding — edit the quantities down for a partial delivery and the rest stays
 on the order for a later trip.
 
@@ -307,24 +309,51 @@ on the order for a later trip.
 - Three-way sign-off: sender, driver, recipient. Marking a note delivered records
   who signed and when.
 
-The sales order page shows every delivery against the order plus an
+The invoice page shows every delivery against it plus an
 ordered / delivered / outstanding table per line.
+
+## Receivables (piutang)
+
+The invoice is the receivable. `amount_paid` and `balance_due` are derived from
+the receipts against it, never stored, so they cannot drift.
+
+**Closing a receivable.** Once an invoice is settled, the Receivable card on the
+invoice page closes it: a closing date (today by default, backdatable to when the
+money actually landed), who closed it, and an optional note. A closed receivable
+drops out of the outstanding figure on the customer statement and can be listed
+on its own with `GET /sales-orders?receivable=closed`.
+
+- **Closing is refused while anything is still owed** — closing an unpaid
+  receivable would quietly write off real money.
+- **Voiding a payment reopens it automatically.** Deleting a receipt puts the
+  money back on the account, so the debt returns to the outstanding list instead
+  of disappearing with the receipt.
+- Reopening by hand is also available, for a payment that turns out to have
+  bounced.
+
+**Customer statement** (`statement.html`, `GET /reports/statement/{customer_id}`)
+is the *rincian pembayaran customer*: every invoice in the period with its total,
+paid and balance, then every payment oldest-first with the **account balance
+after each one** — which is how a customer reads a statement. Filters: company,
+date range, and "open items only". Draft and cancelled invoices are left out
+because they are not a debt; a closed receivable still appears so the history
+stays complete, but stops counting toward outstanding.
 
 ## Status flows
 
 ```
 Quotation  draft → sent → approved → converted
-Sales Order  draft → confirmed → in_production → delivered → completed
+Invoice  draft → confirmed → in_production → delivered → completed
 Purchase Order  draft → sent → received
 Surat Jalan  draft → issued → delivered
 ```
 
 Any of them can go to `cancelled`. Guards worth knowing:
 
-- Only `draft` quotations are editable; `draft`/`confirmed` sales orders; `draft`/`sent` POs.
+- Only `draft` quotations are editable; `draft`/`confirmed` invoices; `draft`/`sent` POs.
 - A quotation can only convert once, and only from `sent` or `approved`.
-- A payment cannot be recorded against a `draft` order, and cannot exceed the balance.
-- A sales order cannot be `completed` while money is outstanding.
+- A payment cannot be recorded against a `draft` invoice, and cannot exceed the balance.
+- An invoice cannot be `completed` while money is outstanding.
 - Deleting is blocked when a later document depends on the record.
 
 ## Reports
@@ -332,13 +361,13 @@ Any of them can go to `cancelled`. Guards worth knowing:
 **Sales** — quotation vs order volume by month, conversion rate, ranking by
 customer and by product.
 
-**Financial** — revenue (sales orders, netto) against cost (purchase orders,
-netto), gross profit and margin %, both overall and per sales order. Both sides
+**Financial** — revenue (invoices, netto) against cost (purchase orders,
+netto), gross profit and margin %, both overall and per invoice. Both sides
 exclude PPN, which is collected on behalf of the tax office and would otherwise
 inflate the margin.
 
-Cost is attributed per order through the **`sales_order_id` link on a purchase
-order**. Raise POs from the "Raise Purchase Order" button on a sales order and the
+Cost is attributed per invoice through the **`sales_order_id` link on a purchase
+order**. Raise POs from the "Raise Purchase Order" button on an invoice and the
 link is set for you. Unlinked POs still count toward total cost, and the report
 says how much is unattributed.
 

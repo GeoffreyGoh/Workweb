@@ -1,4 +1,4 @@
-"""Sales Orders - an accepted quotation, and the document the factory works to.
+"""Invoices - an accepted quotation, and the document the factory works to.
 
 Priced exactly like a quotation (same pricing.py), so converting a quotation
 carries its numbers across unchanged.
@@ -19,7 +19,7 @@ import pricing
 import schemas
 from database import get_db
 
-router = APIRouter(prefix="/sales-orders", tags=["sales orders"])
+router = APIRouter(prefix="/sales-orders", tags=["invoices"])
 
 EDITABLE_STATUSES = {"draft", "confirmed"}
 
@@ -58,6 +58,9 @@ def _to_out(db: Session, so: models.SalesOrder, user) -> schemas.SalesOrderOut:
         out.company_code = so.company.code
     out.amount_paid = _paid(db, so.id)
     out.balance_due = pricing.money(so.total - out.amount_paid)
+    out.is_closed = so.receivable_closed_at is not None
+    if so.closed_by:
+        out.receivable_closed_by_name = so.closed_by.full_name
     return out
 
 
@@ -120,6 +123,9 @@ def list_sales_orders(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     mine_only: bool = False,
+    receivable: Optional[str] = Query(
+        None, description="'open' = still owing, 'closed' = settled and closed"
+    ),
     limit: int = Query(100, le=500),
     offset: int = 0,
     db: Session = Depends(get_db),
@@ -140,6 +146,10 @@ def list_sales_orders(
         query = query.filter(models.SalesOrder.order_date <= date_to)
     if mine_only:
         query = query.filter(models.SalesOrder.created_by == current_user.id)
+    if receivable == "closed":
+        query = query.filter(models.SalesOrder.receivable_closed_at.isnot(None))
+    elif receivable == "open":
+        query = query.filter(models.SalesOrder.receivable_closed_at.is_(None))
 
     rows = query.order_by(models.SalesOrder.id.desc()).offset(offset).limit(limit).all()
 
@@ -158,6 +168,7 @@ def list_sales_orders(
             item.company_code = row.company.code
         item.amount_paid = _paid(db, row.id)
         item.balance_due = pricing.money(row.total - item.amount_paid)
+        item.is_closed = row.receivable_closed_at is not None
         item.can_edit = auth.is_admin(current_user) or row.created_by == current_user.id
         results.append(item)
     return results
@@ -171,7 +182,7 @@ def get_sales_order(
 ):
     so = db.get(models.SalesOrder, so_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     return _to_out(db, so, current_user)
 
 
@@ -236,7 +247,7 @@ def convert_quotation(
         raise HTTPException(
             status_code=409,
             detail=(
-                f"Only an approved or sent quotation can become a sales order "
+                f"Only an approved or sent quotation can become an invoice "
                 f"(this one is '{quotation.status}')"
             ),
         )
@@ -317,12 +328,12 @@ def update_sales_order(
 ):
     so = db.get(models.SalesOrder, so_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
-    auth.require_owner_or_admin(current_user, so, "sales order")
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    auth.require_owner_or_admin(current_user, so, "invoice")
     if so.status not in EDITABLE_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"A '{so.status}' sales order can no longer be edited",
+            detail=f"A '{so.status}' invoice can no longer be edited",
         )
 
     customer = db.get(models.Customer, payload.customer_id)
@@ -364,14 +375,14 @@ def change_status(
 ):
     so = db.get(models.SalesOrder, so_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
-    auth.require_owner_or_admin(current_user, so, "sales order")
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    auth.require_owner_or_admin(current_user, so, "invoice")
 
     allowed = ALLOWED_TRANSITIONS.get(so.status, set())
     if payload.status != so.status and payload.status not in allowed:
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot move a sales order from '{so.status}' to '{payload.status}'",
+            detail=f"Cannot move an invoice from '{so.status}' to '{payload.status}'",
         )
 
     # Closing an order that was never fully paid is usually a mistake.
@@ -400,10 +411,10 @@ def delete_sales_order(
 ):
     so = db.get(models.SalesOrder, so_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
-    auth.require_owner_or_admin(current_user, so, "sales order")
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    auth.require_owner_or_admin(current_user, so, "invoice")
     if so.status != "draft":
-        raise HTTPException(status_code=409, detail="Only draft sales orders can be deleted")
+        raise HTTPException(status_code=409, detail="Only draft invoices can be deleted")
     if so.receipts:
         raise HTTPException(status_code=409, detail="This order already has receipts")
     if db.query(models.PurchaseOrder).filter(
@@ -417,3 +428,69 @@ def delete_sales_order(
             quotation.status = "approved"  # hand it back to the sales side
     db.delete(so)
     db.commit()
+
+
+# ------------------------------------------- closing pembayaran piutang
+@router.post("/{so_id}/close-receivable", response_model=schemas.SalesOrderOut)
+def close_receivable(
+    so_id: int,
+    payload: schemas.CloseReceivable,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Close a settled invoice so it leaves outstanding receivables.
+
+    Refused while anything is still owed: closing a receivable that has not
+    been paid would quietly write off real money.
+    """
+    so = db.get(models.SalesOrder, so_id)
+    if not so:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    auth.require_owner_or_admin(current_user, so, "invoice")
+
+    if so.receivable_closed_at:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{so.so_no} was already closed on {so.receivable_closed_at}",
+        )
+    if so.status == "cancelled":
+        raise HTTPException(status_code=409, detail="A cancelled invoice has no receivable")
+
+    outstanding = pricing.money(so.total - _paid(db, so.id))
+    if outstanding > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"{so.currency} {outstanding:,.2f} is still outstanding on {so.so_no}. "
+                "Record the payment before closing the receivable."
+            ),
+        )
+
+    so.receivable_closed_at = payload.closed_at or date.today()
+    so.receivable_closed_by = current_user.id
+    so.receivable_close_note = payload.note
+    db.commit()
+    db.refresh(so)
+    return _to_out(db, so, current_user)
+
+
+@router.post("/{so_id}/reopen-receivable", response_model=schemas.SalesOrderOut)
+def reopen_receivable(
+    so_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Put a closed invoice back into outstanding receivables."""
+    so = db.get(models.SalesOrder, so_id)
+    if not so:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    auth.require_owner_or_admin(current_user, so, "invoice")
+    if not so.receivable_closed_at:
+        raise HTTPException(status_code=409, detail=f"{so.so_no} is not closed")
+
+    so.receivable_closed_at = None
+    so.receivable_closed_by = None
+    so.receivable_close_note = None
+    db.commit()
+    db.refresh(so)
+    return _to_out(db, so, current_user)

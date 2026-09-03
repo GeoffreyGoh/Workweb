@@ -1,4 +1,4 @@
-/* Surat Jalan list. New notes are raised from the sales order they deliver. */
+/* Delivery note list. New notes are raised from the invoice they deliver. */
 
 const filters = { company_id: '', status: '', q: '', date_from: '', date_to: '' };
 
@@ -13,7 +13,7 @@ async function load() {
 
     if (!list.length) {
       rowsEl.innerHTML =
-        '<tr><td colspan="10" class="empty">No delivery notes yet. Open a confirmed sales order and choose &ldquo;Create Surat Jalan&rdquo;.</td></tr>';
+        '<tr><td colspan="10" class="empty">No delivery notes yet. Open a confirmed invoice and choose &ldquo;Create Delivery Note&rdquo;.</td></tr>';
       return;
     }
 

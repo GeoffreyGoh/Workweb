@@ -1,4 +1,4 @@
-"""Receipts - payments recorded against a sales order."""
+"""Receipts - payments recorded against an invoice."""
 
 from datetime import date
 
@@ -47,7 +47,7 @@ class TestGuards:
         response = client.post("/receipts", headers=budi,
                                json={"sales_order_id": so["id"], "amount": 1000})
         assert response.status_code == 409
-        assert "Confirm the sales order" in response.json()["detail"]
+        assert "Confirm the invoice" in response.json()["detail"]
 
     def test_cannot_pay_a_cancelled_order(self, client, budi, make_sales_order):
         so = make_sales_order(budi)
@@ -135,7 +135,7 @@ class TestVoiding:
                          json={"status": target}, headers=budi)
         response = client.delete(f"/receipts/{receipt['id']}", headers=budi)
         assert response.status_code == 409
-        assert "Reopen the sales order" in response.json()["detail"]
+        assert "Reopen the invoice" in response.json()["detail"]
 
     def test_missing_receipt_is_404(self, client, budi):
         assert client.delete("/receipts/9999", headers=budi).status_code == 404

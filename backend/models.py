@@ -383,6 +383,12 @@ class SalesOrder(Base):
     total = Column(Money(), nullable=False, default=Decimal("0.00"))
     total_qty = Column(Qty(), nullable=False, default=Decimal("0.00"))
 
+    # Closing the receivable (closing pembayaran piutang): set once the
+    # invoice is settled, so it drops out of outstanding receivables.
+    receivable_closed_at = Column(Date)
+    receivable_closed_by = Column(Integer, ForeignKey("users.id"))
+    receivable_close_note = Column(String(255))
+
     notes = Column(Text)
     created_by = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -391,7 +397,8 @@ class SalesOrder(Base):
     )
 
     customer = relationship("Customer", lazy="joined")
-    creator = relationship("User", lazy="joined")
+    creator = relationship("User", lazy="joined", foreign_keys=[created_by])
+    closed_by = relationship("User", lazy="joined", foreign_keys=[receivable_closed_by])
     company = relationship("Company", lazy="joined")
     quotation = relationship("Quotation", lazy="joined")
     items = relationship(

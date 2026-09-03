@@ -251,6 +251,36 @@ class TestQuotationContent:
         assert "Customer Acceptance" in text
 
 
+class TestInvoiceContent:
+    """The document the customer is billed on - it must say Invoice, not
+    Sales Order, and it must carry an INV- number."""
+
+    @pytest.fixture()
+    def text(self, client, budi, full_chain):
+        response = client.get(
+            PATHS["sales_order"].format(id=full_chain["sales_order"]["id"]),
+            headers=budi)
+        return pdf_text(response.content)
+
+    def test_titled_as_an_invoice(self, text):
+        assert "INVOICE" in text
+        assert "SALES ORDER" not in text
+
+    def test_shows_the_invoice_number(self, text, full_chain):
+        so_no = full_chain["sales_order"]["so_no"]
+        assert so_no.startswith("INV-")
+        assert so_no in text
+
+    def test_carries_the_issuing_company(self, text, companies):
+        assert companies["GB"].name in text
+
+    def test_names_the_customer(self, text, customer):
+        assert customer.name in text
+
+    def test_shows_the_totals(self, text):
+        assert "TOTAL" in text
+
+
 class TestReceiptContent:
     @pytest.fixture()
     def text(self, client, budi, full_chain):

@@ -1,6 +1,6 @@
 """Delivery notes (Surat Jalan).
 
-A sales order can go out in several trips, so each delivery is its own
+An invoice can go out in several trips, so each delivery is its own
 numbered document drawing down the ordered quantities. The rule that matters
 is that you cannot deliver more of a line than was ordered.
 
@@ -54,7 +54,7 @@ def _show(value) -> str:
 
 # ------------------------------------------------------------------ helpers
 def _delivered_by_line(db: Session, sales_order_id: int, exclude_note_id=None) -> dict:
-    """Quantity already committed per sales order line.
+    """Quantity already committed per invoice line.
 
     `exclude_note_id` leaves the note being edited out of the tally, so
     re-saving it does not count its own quantities against itself.
@@ -135,7 +135,7 @@ def _apply_items(db: Session, note: models.DeliveryNote, items) -> None:
         if not order_line:
             raise HTTPException(
                 status_code=422,
-                detail=f"Line {position}: that line is not on sales order {so.so_no}",
+                detail=f"Line {position}: that line is not on invoice {so.so_no}",
             )
         wanted[line.sales_order_item_id] = wanted.get(
             line.sales_order_item_id, ZERO
@@ -190,7 +190,7 @@ def _load_order(db: Session, sales_order_id: int) -> models.SalesOrder:
     if so.status in ("draft", "cancelled"):
         raise HTTPException(
             status_code=409,
-            detail=f"Confirm the sales order before delivering it (it is '{so.status}')",
+            detail=f"Confirm the invoice before delivering it (it is '{so.status}')",
         )
     return so
 
@@ -253,7 +253,7 @@ def delivery_status(
     """What is left to deliver on an order - drives the 'new Surat Jalan' form."""
     so = db.get(models.SalesOrder, sales_order_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     lines = outstanding_lines(db, so)
     return schemas.SalesOrderDeliveryStatus(
         sales_order_id=so.id,

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sales Order &middot; Q2O</title>
+  <title>Invoice &middot; Q2O</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
 
   <div class="page">
     <div class="page-head">
-      <h1 id="pageTitle">New Sales Order</h1>
+      <h1 id="pageTitle">New Invoice</h1>
       <span id="statusBadge"></span>
       <span class="hint" id="ownerNote"></span>
       <div class="spacer"></div>
@@ -25,16 +25,16 @@
     <div class="alert info" id="fromQuotation" style="display:none"></div>
 
     <div class="card">
-      <header data-i18n="quotation.details">Order Details</header>
+      <header data-i18n="quotation.details">Invoice Details</header>
       <div class="body">
         <div class="grid">
           <div class="field">
-            <label for="soNo" data-i18n="so.no">Sales Order #</label>
+            <label for="soNo" data-i18n="so.no">Invoice #</label>
             <input type="text" id="soNo" readonly placeholder="Auto-generated on save">
           </div>
 
           <div class="field">
-            <label for="orderDate" data-i18n="so.orderDate">Order Date</label>
+            <label for="orderDate" data-i18n="so.orderDate">Invoice Date</label>
             <input type="date" id="orderDate">
           </div>
 
@@ -189,7 +189,7 @@
         Deliveries (Surat Jalan)
         <div class="spacer"></div>
         <span class="hint" id="deliveryHint"></span>
-        <button class="btn small brass" id="newSjBtn" type="button" data-i18n="so.createSj">+ Create Surat Jalan</button>
+        <button class="btn small brass" id="newSjBtn" type="button" data-i18n="so.createSj">+ Create Delivery Note</button>
       </header>
 
       <div class="table-wrap">
@@ -287,15 +287,15 @@
     <div class="card">
       <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
         <button class="btn primary" id="saveBtn" type="button" data-i18n="common.save">Save</button>
-        <button class="btn brass" id="confirmBtn" type="button" data-i18n="so.confirm">Confirm Order</button>
+        <button class="btn brass" id="confirmBtn" type="button" data-i18n="so.confirm">Confirm Invoice</button>
         <button class="btn" id="productionBtn" type="button" data-i18n="so.toProduction">To Production</button>
         <button class="btn" id="deliveredBtn" type="button" data-i18n="so.markDelivered">Mark Delivered</button>
         <button class="btn" id="completeBtn" type="button" data-i18n="so.complete">Complete</button>
-        <button class="btn" id="pdfBtn" type="button">Sales Order PDF</button>
+        <button class="btn" id="pdfBtn" type="button">Invoice PDF</button>
         <button class="btn" id="poBtn" type="button" data-i18n="so.raisePo">Raise Purchase Order</button>
         <button class="btn" id="splitPoBtn" type="button" data-i18n="so.splitPo">Split PO by Supplier</button>
         <div class="spacer" style="flex:1"></div>
-        <button class="btn danger" id="cancelBtn" type="button">Cancel Order</button>
+        <button class="btn danger" id="cancelBtn" type="button">Cancel Invoice</button>
       </div>
     </div>
   </div>

@@ -28,7 +28,7 @@ async function loadSales() {
 
   document.getElementById('salesKpis').innerHTML = [
     kpi('Quotations', String(r.quotation_count), money(r.quotation_value)),
-    kpi('Sales Orders', String(r.order_count), money(r.order_value)),
+    kpi(t('nav.salesOrders'), String(r.order_count), money(r.order_value)),
     kpi('Conversion Rate', `${fmtNum(r.conversion_rate)}%`, 'orders raised / quotations issued'),
     kpi(
       'Average Order',
@@ -111,7 +111,7 @@ async function loadFinancial() {
   const profitable = Number(r.gross_profit) >= 0;
 
   document.getElementById('finKpis').innerHTML = [
-    kpi('Revenue', money(r.revenue), 'sales orders, netto'),
+    kpi('Revenue', money(r.revenue), 'invoices, netto'),
     kpi('Cost', money(r.cost), 'purchase orders, netto'),
     kpi(
       'Gross Profit',
@@ -126,8 +126,8 @@ async function loadFinancial() {
   if (Number(r.cost_unlinked) > 0) {
     note.innerHTML =
       `<strong>${money(r.cost_unlinked)}</strong> of purchase cost is not linked to a specific ` +
-      `sales order, so it counts toward the totals above but not toward any single order's margin. ` +
-      `Link a purchase order to a sales order when raising it to attribute the cost.`;
+      `invoice, so it counts toward the totals above but not toward any single invoice's margin. ` +
+      `Link a purchase order to an invoice when raising it to attribute the cost.`;
     note.style.display = '';
   } else {
     note.style.display = 'none';
@@ -164,7 +164,7 @@ async function loadFinancial() {
         </tr>`
         )
         .join('')
-    : '<tr><td colspan="8" class="empty">No sales orders in this period.</td></tr>';
+    : '<tr><td colspan="8" class="empty">No invoices in this period.</td></tr>';
 }
 
 /* --------------------------------------------------------------- tabs */

@@ -1,5 +1,5 @@
 /* =====================================================================
-   Shared line-item table for quotations and sales orders - both price
+   Shared line-item table for quotations and invoices - both price
    lines identically, so they share this editor.
 
    Totals computed here are a live preview only; the API recalculates on

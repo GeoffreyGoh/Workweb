@@ -1,4 +1,4 @@
-"""Receipts - money received against a sales order (kwitansi).
+"""Receipts - money received against an invoice (kwitansi).
 
 A receipt is a record of payment, so it is deliberately hard to change: it can
 be created and (by its author or an admin) deleted, but not edited. Correcting
@@ -90,7 +90,7 @@ def create_receipt(
     if so.status in ("draft", "cancelled"):
         raise HTTPException(
             status_code=409,
-            detail=f"Confirm the sales order before recording payment (it is '{so.status}')",
+            detail=f"Confirm the invoice before recording payment (it is '{so.status}')",
         )
 
     already = db.query(func.sum(models.Receipt.amount)).filter(
@@ -146,7 +146,24 @@ def void_receipt(
     if receipt.sales_order and receipt.sales_order.status == "completed":
         raise HTTPException(
             status_code=409,
-            detail="Reopen the sales order before voiding one of its receipts",
+            detail="Reopen the invoice before voiding one of its receipts",
         )
+    so = receipt.sales_order
     db.delete(receipt)
+    db.flush()
+
+    # Voiding a payment puts money back on the account, so a receivable that
+    # was closed as settled is no longer settled. Reopen it rather than let
+    # the debt disappear from the outstanding list.
+    if so is not None and so.receivable_closed_at is not None:
+        still_owed = pricing.money(
+            so.total
+            - (db.query(func.sum(models.Receipt.amount))
+               .filter(models.Receipt.sales_order_id == so.id).scalar() or 0)
+        )
+        if still_owed > 0:
+            so.receivable_closed_at = None
+            so.receivable_closed_by = None
+            so.receivable_close_note = None
+
     db.commit()

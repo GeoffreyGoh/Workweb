@@ -1,4 +1,4 @@
-"""Sales orders, and converting a quotation into one."""
+"""Invoices, and converting a quotation into one."""
 
 from datetime import date
 
@@ -115,13 +115,13 @@ class TestConversion:
 
         response = client.delete(f"/quotations/{q['id']}", headers=admin)
         assert response.status_code == 409
-        assert "sales order" in response.json()["detail"]
+        assert "invoice" in response.json()["detail"]
 
 
 class TestDirectCreate:
     def test_numbering(self, client, budi, make_sales_order):
         so = make_sales_order(budi)
-        assert so["so_no"] == f"SO-GB-{date.today():%Y%m}-001"
+        assert so["so_no"] == f"INV-GB-{date.today():%Y%m}-001"
 
     def test_priced_like_a_quotation(self, client, budi, make_sales_order, products):
         so = make_sales_order(budi, items=[

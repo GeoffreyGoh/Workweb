@@ -1,4 +1,4 @@
-"""PDF documents: quotation, sales order, purchase order, receipt.
+"""PDF documents: quotation, invoice, purchase order, receipt.
 
 One shared letterhead and one shared visual language, built with ReportLab
 (pure Python - no GTK/Cairo system libraries, so it behaves the same on the
@@ -358,7 +358,7 @@ UNIT_LABEL = {"per_sqm": "m2", "per_meter": "m", "per_unit": "pcs"}
 # ------------------------------------------------------------------ documents
 def _sales_document(doc, title, number_label, number, date_label, date_value,
                     extra_fields, company=None, logo=None):
-    """Shared body for quotations and sales orders - identical line structure."""
+    """Shared body for quotations and invoices - identical line structure."""
     currency = doc.currency
     story = letterhead(company, logo)
 
@@ -537,9 +537,9 @@ def sales_order_pdf(so) -> bytes:
     company, _terms, logo = identity(so)
     story = _sales_document(
         so,
-        "SALES ORDER",
-        "SO No", so.so_no,
-        "Order Date", so.order_date,
+        "INVOICE",
+        "Invoice No", so.so_no,
+        "Invoice Date", so.order_date,
         [
             ("Delivery Date", fmt_date(so.delivery_date)),
             ("Customer PO", so.po_reference or "-"),
@@ -649,7 +649,7 @@ def delivery_note_pdf(note) -> bytes:
     story += title_block("SURAT JALAN", [
         ("No. Surat Jalan", note.sj_no),
         ("Tanggal", fmt_date(note.delivery_date)),
-        ("No. Sales Order", so.so_no if so else "-"),
+        ("No. Faktur / Invoice No", so.so_no if so else "-"),
         ("No. PO Pelanggan", (so.po_reference if so else None) or "-"),
     ])
 
@@ -807,7 +807,7 @@ def receipt_pdf(receipt, amount_paid, balance_due) -> bytes:
     story += title_block("RECEIPT / KWITANSI", [
         ("Receipt No", receipt.receipt_no),
         ("Date", fmt_date(receipt.receipt_date)),
-        ("Sales Order", so.so_no if so else "-"),
+        ("Invoice No", so.so_no if so else "-"),
     ])
 
     amount_box = Table(
@@ -845,7 +845,7 @@ def receipt_pdf(receipt, amount_paid, balance_due) -> bytes:
         ("Received from", receipt.received_from or (so.customer.name if so and so.customer else "-")),
         ("Payment method", METHOD_LABEL.get(receipt.payment_method, receipt.payment_method)),
         ("Reference", receipt.reference or "-"),
-        ("For payment of", f"Sales Order {so.so_no}" if so else "-"),
+        ("For payment of", f"Invoice {so.so_no}" if so else "-"),
     ]
     if receipt.notes:
         rows.append(("Notes", receipt.notes))

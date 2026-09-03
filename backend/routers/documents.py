@@ -57,9 +57,9 @@ def sales_order_pdf(
 ):
     so = db.get(models.SalesOrder, so_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     if not so.items:
-        raise HTTPException(status_code=409, detail="This sales order has no line items")
+        raise HTTPException(status_code=409, detail="This invoice has no line items")
     return _pdf_response(pdf_builder.sales_order_pdf(so), f"{so.so_no}.pdf", download)
 
 

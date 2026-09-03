@@ -140,6 +140,14 @@ const api = {
   deliveryStatus: (salesOrderId) =>
     apiFetch(`/delivery-notes/outstanding/${salesOrderId}`),
 
+  closeReceivable: (id, body) =>
+    apiFetch(`/sales-orders/${id}/close-receivable`, { method: 'POST', body }),
+  reopenReceivable: (id) =>
+    apiFetch(`/sales-orders/${id}/reopen-receivable`, { method: 'POST' }),
+
+  customerStatement: (customerId, params) =>
+    apiFetch(`/reports/statement/${customerId}${qs(params)}`),
+
   listReceipts: (params) => apiFetch(`/receipts${qs(params)}`),
   createReceipt: (body) => apiFetch('/receipts', { method: 'POST', body }),
   voidReceipt: (id) => apiFetch(`/receipts/${id}`, { method: 'DELETE' }),
@@ -310,6 +318,7 @@ function renderTopbar(activePage, user) {
     { href: 'purchase-orders.html', i18n: 'nav.purchaseOrders', key: 'purchase-orders' },
     { href: 'delivery-notes.html', i18n: 'nav.deliveryNotes', key: 'delivery-notes' },
     { href: 'schedule.html', i18n: 'nav.schedule', key: 'schedule' },
+    { href: 'statement.html', i18n: 'nav.statement', key: 'statement' },
     { href: 'receipts.html', i18n: 'nav.receipts', key: 'receipts' },
     { href: 'reports.html', i18n: 'nav.reports', key: 'reports' },
   ];

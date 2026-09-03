@@ -1,6 +1,6 @@
 """Purchase Orders - raw materials bought from suppliers.
 
-Linking a PO to the sales order it serves is optional, but it is what lets the
+Linking a PO to the invoice it serves is optional, but it is what lets the
 financial report attribute cost to revenue. Unlinked POs still count as
 overall cost, just not against a specific order.
 """
@@ -255,7 +255,7 @@ def delete_purchase_order(
 
 # ------------------------------------------------- split across suppliers
 def _split_groups(db: Session, so: models.SalesOrder):
-    """Group a sales order's lines by each product's default supplier."""
+    """Group an invoice's lines by each product's default supplier."""
     product_ids = {line.product_id for line in so.items}
     products = {
         p.id: p
@@ -304,10 +304,10 @@ def preview_split(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    """Show how a sales order would break into one purchase order per supplier."""
+    """Show how an invoice would break into one purchase order per supplier."""
     so = db.get(models.SalesOrder, sales_order_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     groups, unassigned = _split_groups(db, so)
     return schemas.PurchaseOrderSplitPreview(
         sales_order_id=so.id, so_no=so.so_no, groups=groups, unassigned=unassigned
@@ -324,7 +324,7 @@ def create_split(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    """Raise one draft purchase order per supplier for a sales order.
+    """Raise one draft purchase order per supplier for an invoice.
 
     Lines whose product has no default supplier are left out rather than
     dumped on an arbitrary vendor; the preview endpoint lists them so they can
@@ -332,11 +332,11 @@ def create_split(
     """
     so = db.get(models.SalesOrder, sales_order_id)
     if not so:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise HTTPException(status_code=404, detail="Invoice not found")
     if so.status in ("draft", "cancelled"):
         raise HTTPException(
             status_code=409,
-            detail=f"Confirm the sales order before ordering materials (it is '{so.status}')",
+            detail=f"Confirm the invoice before ordering materials (it is '{so.status}')",
         )
 
     groups, unassigned = _split_groups(db, so)

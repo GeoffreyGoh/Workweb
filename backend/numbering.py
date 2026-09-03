@@ -1,6 +1,6 @@
 """Per-company, per-month document numbering: PREFIX-COMPANY-YYYYMM-###.
 
-Q-GB-202608-001, SO-GB-202608-001, PO-MJ-202608-001, RCP-GB-202608-001.
+Q-GB-202608-001, INV-GB-202608-001, PO-MJ-202608-001, RCP-GB-202608-001.
 
 Each company runs its own sequence: two entities may both hold document 001
 for a month without colliding, which is what a separate set of books needs.
@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 PREFIXES = {
     "quotation": "Q",
-    "sales_order": "SO",
+    "sales_order": "INV",   # the document is called an Invoice
     "purchase_order": "PO",
     "receipt": "RCP",
     "delivery_note": "SJ",  # Surat Jalan

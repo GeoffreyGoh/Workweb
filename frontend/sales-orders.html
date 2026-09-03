@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sales Orders &middot; Q2O</title>
+  <title>Invoices &middot; Q2O</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -12,9 +12,9 @@
 
   <div class="page">
     <div class="page-head">
-      <h1 data-i18n="so.list">Sales Orders</h1>
+      <h1 data-i18n="so.list">Invoices</h1>
       <div class="spacer"></div>
-      <a class="btn brass" href="sales-order-form.html">+ New Sales Order</a>
+      <a class="btn brass" href="sales-order-form.html" data-i18n="so.new">+ New Invoice</a>
     </div>
 
     <div class="alert error hidden" id="error"></div>
@@ -47,7 +47,7 @@
           </div>
 
           <div class="field">
-            <label for="fNo" data-i18n="so.no">SO #</label>
+            <label for="fNo" data-i18n="so.no">Invoice #</label>
             <input type="text" id="fNo" placeholder="SO-202608-">
           </div>
 
@@ -78,7 +78,7 @@
         <table class="data">
           <thead>
             <tr>
-              <th data-i18n="so.no">SO #</th>
+              <th data-i18n="so.no">Invoice #</th>
               <th data-i18n="common.date">Date</th>
               <th data-i18n="common.customer">Customer</th>
               <th>From Quotation</th>

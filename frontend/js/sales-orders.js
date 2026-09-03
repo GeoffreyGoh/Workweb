@@ -1,4 +1,4 @@
-/* Sales order list: filters + table. */
+/* Invoice list: filters + table. */
 
 const filters = { company_id: '',
   status: '',
@@ -20,7 +20,7 @@ async function load() {
 
     if (!list.length) {
       rowsEl.innerHTML =
-        '<tr><td colspan="10" class="empty">No sales orders match these filters.</td></tr>';
+        '<tr><td colspan="10" class="empty">No invoices match these filters.</td></tr>';
       return;
     }
 
@@ -44,7 +44,7 @@ async function load() {
       })
       .join('');
   } catch (err) {
-    rowsEl.innerHTML = '<tr><td colspan="10" class="empty">Could not load sales orders.</td></tr>';
+    rowsEl.innerHTML = '<tr><td colspan="10" class="empty">Could not load invoices.</td></tr>';
     errorEl.textContent = err.message;
     errorEl.classList.remove('hidden');
   }

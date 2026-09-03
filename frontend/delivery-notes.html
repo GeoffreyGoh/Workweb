@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Surat Jalan &middot; Q2O</title>
+  <title>Delivery Notes &middot; Q2O</title>
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -12,10 +12,10 @@
 
   <div class="page">
     <div class="page-head">
-      <h1>Surat Jalan</h1>
-      <span class="hint">Delivery notes &mdash; raised from a confirmed sales order</span>
+      <h1 data-i18n="sj.list">Delivery Notes</h1>
+      <span class="hint" data-i18n="sj.raisedFrom">Raised from a confirmed invoice</span>
       <div class="spacer"></div>
-      <a class="btn" href="sales-orders.html">Go to Sales Orders</a>
+      <a class="btn" href="sales-orders.html" data-i18n="so.list">Invoices</a>
     </div>
 
     <div class="alert error hidden" id="error"></div>
@@ -39,7 +39,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="fNo" data-i18n="sj.no">Surat Jalan #</label>
+            <label for="fNo" data-i18n="sj.no">Delivery Note #</label>
             <input type="text" id="fNo" placeholder="SJ-202608-">
           </div>
           <div class="field">
@@ -60,14 +60,14 @@
         <table class="data">
           <thead>
             <tr>
-              <th data-i18n="sj.no">Surat Jalan #</th>
+              <th data-i18n="sj.no">Delivery Note #</th>
               <th data-i18n="common.date">Date</th>
-              <th>Sales Order</th>
+              <th data-i18n="so.no">Invoice #</th>
               <th data-i18n="common.customer">Customer</th>
               <th data-i18n="quotation.deliverTo">Deliver To</th>
-              <th>Vehicle / Driver</th>
+              <th data-i18n="sj.vehicleDriver">Vehicle / Driver</th>
               <th class="center" data-i18n="common.status">Status</th>
-              <th class="right">Items</th>
+              <th class="right" data-i18n="sj.itemCount">Items</th>
               <th class="right" data-i18n="common.totalQty">Total Qty</th>
               <th data-i18n="common.createdBy">Created By</th>
             </tr>

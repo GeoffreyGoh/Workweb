@@ -346,6 +346,13 @@ CREATE TABLE IF NOT EXISTS sales_orders (
     total           DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     total_qty       DECIMAL(12,2) NOT NULL DEFAULT 0.00,
 
+    -- Closing the receivable (closing pembayaran piutang). Set once the
+    -- invoice is settled so it drops out of outstanding receivables; cleared
+    -- again if a payment is later voided.
+    receivable_closed_at  DATE         NULL,
+    receivable_closed_by  INT          NULL,
+    receivable_close_note VARCHAR(255) NULL,
+
     notes      TEXT     NULL,
     created_by INT      NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -353,6 +360,7 @@ CREATE TABLE IF NOT EXISTS sales_orders (
                         ON UPDATE CURRENT_TIMESTAMP,
 
     UNIQUE KEY uq_so_no (so_no),
+    KEY ix_so_receivable (receivable_closed_at),
     KEY ix_so_status (status),
     KEY ix_so_customer (customer_id),
     CONSTRAINT fk_so_quotation FOREIGN KEY (quotation_id) REFERENCES quotations (id),

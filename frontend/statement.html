@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer Statement &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="statement.title">Customer Statement</h1>
+      <div class="spacer"></div>
+      <div class="filters" style="gap:10px">
+        <div class="field autocomplete" style="min-width:240px">
+          <label for="fCustomer" data-i18n="common.customer">Customer</label>
+          <input type="text" id="fCustomer" data-i18n-placeholder="common.search">
+          <div class="results hidden" id="fCustomerResults"></div>
+        </div>
+        <div class="field">
+          <label for="fCompany" data-i18n="common.company">Company</label>
+          <select id="fCompany"></select>
+        </div>
+        <div class="field">
+          <label for="fFrom" data-i18n="common.dateFrom">From</label>
+          <input type="date" id="fFrom">
+        </div>
+        <div class="field">
+          <label for="fTo" data-i18n="common.dateTo">To</label>
+          <input type="date" id="fTo">
+        </div>
+        <div class="field" style="min-width:auto">
+          <label>&nbsp;</label>
+          <label style="text-transform:none; font-weight:400; font-size:13px;
+                        display:flex; gap:6px; align-items:center; padding-bottom:8px">
+            <input type="checkbox" id="fOpenOnly" style="width:auto">
+            <span data-i18n="statement.openOnly">Only unpaid invoices</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert info" id="pickHint" data-i18n="statement.pick">
+      Choose a customer to see their invoices and payments.
+    </div>
+
+    <div id="statement" style="display:none">
+      <div class="kpis" style="margin-bottom:16px" id="kpis"></div>
+
+      <div class="card">
+        <header>
+          <span data-i18n="statement.invoices">Invoices</span>
+          <div class="spacer"></div>
+          <span class="hint" id="invoiceNote"></span>
+        </header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="so.no">Invoice #</th>
+                <th data-i18n="so.orderDate">Invoice Date</th>
+                <th data-i18n="common.company">Company</th>
+                <th class="center" data-i18n="common.status">Status</th>
+                <th class="right" data-i18n="common.total">Total</th>
+                <th class="right" data-i18n="statement.paid">Paid</th>
+                <th class="right" data-i18n="common.balance">Balance</th>
+                <th data-i18n="ar.filter">Receivable</th>
+              </tr>
+            </thead>
+            <tbody id="invoiceRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header data-i18n="statement.payments">Payment Detail</header>
+        <div class="table-wrap">
+          <table class="data">
+            <thead>
+              <tr>
+                <th data-i18n="statement.paymentDate">Payment Date</th>
+                <th data-i18n="receipt.no">Receipt #</th>
+                <th data-i18n="so.no">Invoice #</th>
+                <th data-i18n="receipt.method">Method</th>
+                <th data-i18n="receipt.reference">Reference</th>
+                <th class="right" data-i18n="common.amount">Amount</th>
+                <th class="right" data-i18n="statement.runningBalance">Balance After</th>
+                <th data-i18n="receipt.recordedBy">Recorded By</th>
+                <th style="width:70px"></th>
+              </tr>
+            </thead>
+            <tbody id="paymentRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/statement.js"></script>
+</body>
+</html>

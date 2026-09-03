@@ -4,7 +4,7 @@ Both reports work off netto (pre-PPN) figures. PPN is collected on behalf of
 the tax office and passed through, so including it would inflate both revenue
 and cost and distort the margin.
 
-Cost comes from purchase orders. A PO linked to a sales order is attributed to
+Cost comes from purchase orders. A PO linked to an invoice is attributed to
 that order; unlinked POs still count toward total cost for the period but
 cannot be broken down per order.
 """
@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -334,4 +334,116 @@ def financial_report(
             for period, v in sorted(periods.items())
         ],
         by_order=by_order,
+    )
+
+
+@router.get("/statement/{customer_id}", response_model=schemas.CustomerStatement)
+def customer_statement(
+    customer_id: int,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    company_id: Optional[int] = None,
+    open_only: bool = Query(False, description="Only invoices still owing"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Rincian pembayaran customer - what they were invoiced, what they have
+    paid, and what is still outstanding.
+
+    Cancelled and draft invoices are left out: they are not a debt. A closed
+    receivable still appears so the history stays complete, but it no longer
+    counts toward the outstanding figure.
+    """
+    customer = db.get(models.Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    start, end = _default_range(date_from, date_to)
+
+    query = db.query(models.SalesOrder).filter(
+        models.SalesOrder.customer_id == customer_id,
+        models.SalesOrder.order_date >= start,
+        models.SalesOrder.order_date <= end,
+        models.SalesOrder.status.in_(LIVE_SO_STATUSES),
+    )
+    if company_id:
+        query = query.filter(models.SalesOrder.company_id == company_id)
+    orders = query.order_by(models.SalesOrder.order_date, models.SalesOrder.id).all()
+
+    paid_by_order = {}
+    for order_id, total in (
+        db.query(models.Receipt.sales_order_id, func.sum(models.Receipt.amount))
+        .filter(models.Receipt.sales_order_id.in_([o.id for o in orders] or [0]))
+        .group_by(models.Receipt.sales_order_id)
+        .all()
+    ):
+        paid_by_order[order_id] = pricing.money(total or 0)
+
+    invoices, invoiced, paid_total, outstanding, open_count = [], ZERO, ZERO, ZERO, 0
+    for order in orders:
+        paid = paid_by_order.get(order.id, ZERO)
+        balance = pricing.money(order.total - paid)
+        closed = order.receivable_closed_at is not None
+
+        invoiced += order.total
+        paid_total += paid
+        if not closed:
+            outstanding += balance
+            if balance > 0:
+                open_count += 1
+
+        if open_only and (closed or balance <= 0):
+            continue
+        invoices.append(
+            schemas.StatementInvoice(
+                id=order.id, so_no=order.so_no, order_date=order.order_date,
+                company_code=order.company.code if order.company else None,
+                status=order.status, total=pricing.money(order.total),
+                paid=paid, balance=balance, is_closed=closed,
+                receivable_closed_at=order.receivable_closed_at,
+            )
+        )
+
+    # Every payment in the period, oldest first, with the account balance after
+    # each one - which is how a customer reads a statement.
+    receipts = (
+        db.query(models.Receipt)
+        .join(models.SalesOrder)
+        .filter(
+            models.SalesOrder.customer_id == customer_id,
+            models.Receipt.receipt_date >= start,
+            models.Receipt.receipt_date <= end,
+        )
+        .order_by(models.Receipt.receipt_date, models.Receipt.id)
+        .all()
+    )
+    if company_id:
+        receipts = [r for r in receipts if r.company_id == company_id]
+
+    running = pricing.money(invoiced)
+    payments = []
+    for receipt in receipts:
+        running = pricing.money(running - receipt.amount)
+        payments.append(
+            schemas.StatementPayment(
+                id=receipt.id, receipt_no=receipt.receipt_no,
+                receipt_date=receipt.receipt_date,
+                sales_order_id=receipt.sales_order_id,
+                so_no=receipt.sales_order.so_no if receipt.sales_order else None,
+                payment_method=receipt.payment_method, reference=receipt.reference,
+                amount=pricing.money(receipt.amount),
+                recorded_by=receipt.creator.full_name if receipt.creator else None,
+                running_balance=running,
+            )
+        )
+
+    company = db.get(models.Company, company_id) if company_id else None
+    return schemas.CustomerStatement(
+        customer_id=customer.id, customer_code=customer.code,
+        customer_name=customer.name,
+        company_id=company_id, company_name=company.name if company else None,
+        date_from=start, date_to=end,
+        invoiced=pricing.money(invoiced), paid=pricing.money(paid_total),
+        outstanding=pricing.money(outstanding), open_invoice_count=open_count,
+        invoices=invoices, payments=payments,
     )

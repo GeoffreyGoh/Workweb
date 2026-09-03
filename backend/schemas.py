@@ -415,6 +415,8 @@ class SalesOrderListOut(ORMModel):
     total_qty: Decimal
     amount_paid: Decimal = Decimal("0.00")
     balance_due: Decimal = Decimal("0.00")
+    receivable_closed_at: Optional[date] = None
+    is_closed: bool = False
     created_at: datetime
     created_by: Optional[int] = None
     created_by_name: Optional[str] = None
@@ -466,6 +468,11 @@ class SalesOrderOut(ORMModel):
 
     amount_paid: Decimal = Decimal("0.00")
     balance_due: Decimal = Decimal("0.00")
+    # Closing pembayaran piutang.
+    receivable_closed_at: Optional[date] = None
+    receivable_closed_by_name: Optional[str] = None
+    receivable_close_note: Optional[str] = None
+    is_closed: bool = False
 
     notes: Optional[str] = None
     created_by: Optional[int] = None
@@ -897,3 +904,57 @@ class PurchaseOrderSplitPreview(BaseModel):
     groups: List[SupplierSplitGroup] = Field(default_factory=list)
     # Lines whose product has no default supplier set.
     unassigned: List[SupplierSplitLine] = Field(default_factory=list)
+
+
+# ------------------------------------------- closing pembayaran piutang
+class CloseReceivable(BaseModel):
+    """Close a settled invoice so it leaves outstanding receivables."""
+
+    closed_at: Optional[date] = None
+    note: Optional[str] = Field(default=None, max_length=255)
+
+
+# ------------------------------------ rincian pembayaran (customer statement)
+class StatementInvoice(BaseModel):
+    id: int
+    so_no: str
+    order_date: date
+    company_code: Optional[str] = None
+    status: str
+    total: Decimal
+    paid: Decimal
+    balance: Decimal
+    is_closed: bool = False
+    receivable_closed_at: Optional[date] = None
+
+
+class StatementPayment(BaseModel):
+    id: int
+    receipt_no: str
+    receipt_date: date
+    sales_order_id: int
+    so_no: Optional[str] = None
+    payment_method: str
+    reference: Optional[str] = None
+    amount: Decimal
+    recorded_by: Optional[str] = None
+    # Balance across the whole account after this payment.
+    running_balance: Decimal = Decimal("0.00")
+
+
+class CustomerStatement(BaseModel):
+    customer_id: int
+    customer_code: Optional[str] = None
+    customer_name: str
+    company_id: Optional[int] = None
+    company_name: Optional[str] = None
+    date_from: date
+    date_to: date
+
+    invoiced: Decimal = Decimal("0.00")
+    paid: Decimal = Decimal("0.00")
+    outstanding: Decimal = Decimal("0.00")
+    open_invoice_count: int = 0
+
+    invoices: List[StatementInvoice] = Field(default_factory=list)
+    payments: List[StatementPayment] = Field(default_factory=list)

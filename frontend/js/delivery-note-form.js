@@ -1,7 +1,7 @@
 /* =====================================================================
-   Surat Jalan (delivery note).
+   Delivery note (Surat Jalan).
 
-   Lines are not free-form: they are the sales order's lines, each capped
+   Lines are not free-form: they are the invoice's lines, each capped
    at what is still outstanding. The server enforces the cap too.
    ===================================================================== */
 
@@ -211,14 +211,14 @@ el('deliveredBtn').addEventListener('click', () =>
 );
 
 el('cancelBtn').addEventListener('click', () => {
-  if (confirm('Cancel this Surat Jalan? The goods go back on the outstanding list.')) {
+  if (confirm('Cancel this delivery note? The goods go back on the outstanding list.')) {
     changeStatus('cancelled', 'cancelled');
   }
 });
 
 el('pdfBtn').addEventListener('click', async () => {
   clearAlerts();
-  if (!state.id) return showError('Save the Surat Jalan first.');
+  if (!state.id) return showError('Save the delivery note first.');
   try {
     await openPdf('deliveryNote', state.id);
   } catch (err) {
@@ -247,14 +247,14 @@ async function applyNote(note) {
   el('receivedBy').value = note.received_by || '';
   el('receivedAt').value = note.received_at || '';
 
-  el('pageTitle').textContent = `Surat Jalan ${note.sj_no}`;
+  el('pageTitle').textContent = `${t('sj.list')} ${note.sj_no}`;
   el('statusBadge').innerHTML = statusBadge(note.status);
   el('ownerNote').textContent = note.created_by_name ? `Created by ${note.created_by_name}` : '';
   document.title = `${note.sj_no} · Q2O`;
 
   const link = el('orderLink');
   link.innerHTML =
-    `For sales order <a href="sales-order-form.html?id=${note.sales_order_id}">` +
+    `For invoice <a href="sales-order-form.html?id=${note.sales_order_id}">` +
     `<strong>${esc(note.so_no || '')}</strong></a> — ${esc(note.customer_name || '')}`;
   link.style.display = '';
 
@@ -310,7 +310,7 @@ function updateActions() {
   const locked = el('lockedNote');
   if (saved && !editable) {
     locked.textContent =
-      'Read-only: this Surat Jalan belongs to another user. An admin can change it.';
+      'Read-only: this delivery note belongs to another user. An admin can change it.';
     locked.style.display = '';
   } else {
     locked.style.display = 'none';
@@ -336,10 +336,10 @@ function updateActions() {
     return;
   }
 
-  // Arrived from "Create Surat Jalan" on a sales order.
+  // Arrived from "Create Delivery Note" on an invoice.
   const soId = params.get('sales_order_id');
   if (!soId) {
-    showError('Open a confirmed sales order and choose "Create Surat Jalan".');
+    showError('Open a confirmed invoice and choose "Create Delivery Note".');
     return;
   }
 

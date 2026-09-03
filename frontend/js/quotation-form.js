@@ -265,7 +265,7 @@ el('pdfBtn').addEventListener('click', async () => {
 
 el('convertBtn').addEventListener('click', async () => {
   clearAlerts();
-  if (!confirm('Create a sales order from this quotation?')) return;
+  if (!confirm('Create an invoice from this quotation?')) return;
   try {
     const so = await api.convertQuotation(state.id);
     window.location.href = `sales-order-form.html?id=${so.id}`;

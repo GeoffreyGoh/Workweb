@@ -152,7 +152,7 @@ class TestNumberingIsPerCompany:
                      headers=budi)
         so = client.post(f"/sales-orders/from-quotation/{q['id']}", headers=budi).json()
         assert so["company_code"] == "MJ"
-        assert so["so_no"].startswith("SO-MJ-")
+        assert so["so_no"].startswith("INV-MJ-")
 
         client.patch(f"/sales-orders/{so['id']}/status", json={"status": "confirmed"},
                      headers=budi)
