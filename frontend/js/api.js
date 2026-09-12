@@ -3,7 +3,7 @@
    Loaded by every page before its own script.
    ===================================================================== */
 
-const API_BASE = window.location.origin;
+const API_BASE = window.API_BASE_URL || window.location.origin;
 const TOKEN_KEY = 'q2o_token';
 const USER_KEY = 'q2o_user';
 
