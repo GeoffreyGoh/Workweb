@@ -12,7 +12,19 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-me-in-production")
+DEV_SECRET = "dev-secret-change-me-in-production"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", DEV_SECRET)
+
+# The dev secret is in the repository, so anyone could mint an admin token
+# against a deployment that still uses it. Refuse to start rather than serve
+# customer data behind a published password.
+if SECRET_KEY == DEV_SECRET and os.getenv("VERCEL_ENV") == "production":
+    raise RuntimeError(
+        "JWT_SECRET_KEY is not set. Generate one with "
+        '`python -c "import secrets; print(secrets.token_hex(32))"` and add it '
+        "to the project's environment variables before deploying to production."
+    )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 

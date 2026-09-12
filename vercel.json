@@ -1,10 +1,8 @@
 {
-  "buildCommand": "python -m venv .venv && .venv/bin/python -m pip install --upgrade pip setuptools wheel && .venv/bin/python -m pip install -r backend/requirements.txt",
-  "outputDirectory": "backend",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.py"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app.py": {
+      "excludeFiles": "{backend/tests/**,backend/*.xlsx,**/*.db,.venv/**,backend/.venv/**}"
     }
-  ]
+  }
 }

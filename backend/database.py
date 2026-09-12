@@ -1,7 +1,7 @@
 """Database connection.
 
 Local dev defaults to SQLite so there's nothing to install. Production sets
-DATABASE_URL to the managed MySQL instance, e.g.
+DATABASE_URL to the managed database, e.g.
 
     DATABASE_URL=mysql+pymysql://user:pass@host:3306/q2o?charset=utf8mb4
 
@@ -12,40 +12,42 @@ import os
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import declarative_base, sessionmaker
-
-# backend/database.py — replace from 'load_dotenv()' block down to engine creation
 
 load_dotenv()
 
-# Resolve database URL. Prefer an explicit DATABASE_URL environment variable.
-# For serverless platforms (Vercel) the repository root is read-only; use /tmp.
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    # Detect Vercel or similar serverless envs and fall back to /tmp
-    if os.getenv("VERCEL") or os.getenv("VERCEL_ENV") or os.getenv("NOW_REGION"):
-        DATABASE_URL = "sqlite:////tmp/q2o.db"
-    else:
-        DATABASE_URL = "sqlite:///./q2o.db"
+# Serverless hosts (Vercel, Lambda) have a read-only filesystem apart from
+# /tmp, so a SQLite fallback has to live there. It is per-instance and wiped
+# between cold starts - fine for a smoke test, useless as real storage, which
+# is why production must set DATABASE_URL to a managed database.
+IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
 
+DATABASE_URL = os.getenv("DATABASE_URL") or (
+    "sqlite:////tmp/q2o.db" if IS_SERVERLESS else "sqlite:///./q2o.db"
+)
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
-# Create engine; wrap in try/except so import-time errors are printed to logs.
-try:
-    engine = create_engine(
-        DATABASE_URL,
-        connect_args={"check_same_thread": False} if IS_SQLITE else {},
-        pool_pre_ping=True,
-        future=True,
-    )
-except Exception:
-    # Print the exception and some env context to stderr so Vercel's logs include it.
-    import traceback, sys
+# A serverless function gets its own process per instance, so a normal pool
+# would multiply: 20 warm instances x 5 pooled connections exhausts the
+# connection limit of a small managed MySQL. Open and close per request there.
+POOL = {"poolclass": NullPool} if IS_SERVERLESS else {"pool_pre_ping": True}
 
-    traceback.print_exc()
-    print("DATABASE_URL:", DATABASE_URL, file=sys.stderr)
-    # Re-raise so the platform still fails the deployment (we want the stack trace).
-    raise
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    future=True,
+    **POOL,
+)
 
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
+
+
+def get_db():
+    """FastAPI dependency: one session per request."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

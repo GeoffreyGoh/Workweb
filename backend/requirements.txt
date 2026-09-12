@@ -1,0 +1,4 @@
+# The real list lives at the repository root, because that is where Vercel's
+# Python runtime looks for it. Kept here so the documented local install
+# ("pip install -r requirements.txt" from backend/) still works.
+-r ../requirements.txt
