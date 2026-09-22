@@ -828,6 +828,13 @@ class FinancialReport(BaseModel):
     company_name: Optional[str] = None
     currency: str = "IDR"
 
+    # Whose figures these are. A normal user only ever gets their own, so the
+    # UI must be able to label the report rather than let it read as the
+    # whole company's performance. None + is_whole_business means everyone.
+    scoped_to_user_id: Optional[int] = None
+    scoped_to_user_name: Optional[str] = None
+    is_whole_business: bool = True
+
     # Revenue and cost are both net of PPN, so the margin is a real margin.
     revenue: Decimal
     cost: Decimal

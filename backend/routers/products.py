@@ -64,8 +64,14 @@ def get_product(
 def create_product(
     payload: schemas.ProductCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_role("admin")),
 ):
+    """Add a product to the catalogue. Admin only.
+
+    The price list is what every quotation is built from, so a wrong code or
+    price leaks into every document that uses it. Sales staff pick from the
+    catalogue; only an admin decides what is in it.
+    """
     exists = db.query(models.Product).filter(models.Product.code == payload.code).first()
     if exists:
         raise HTTPException(status_code=409, detail=f"Product code '{payload.code}' already exists")
@@ -82,8 +88,9 @@ def update_product(
     product_id: int,
     payload: schemas.ProductUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_role("admin")),
 ):
+    """Edit a product, or retire it with is_active=false. Admin only."""
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")

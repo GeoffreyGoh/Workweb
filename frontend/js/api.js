@@ -94,6 +94,11 @@ const api = {
 
   listProducts: (q) => apiFetch(`/products?limit=20${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   getProduct: (id) => apiFetch(`/products/${id}`),
+  // The catalogue page needs retired products too, so it can bring one back.
+  listAllProducts: (params) => apiFetch(`/products${qs(params)}`),
+  // Admin only - a normal user's call comes back 403.
+  createProduct: (body) => apiFetch('/products', { method: 'POST', body }),
+  updateProduct: (id, body) => apiFetch(`/products/${id}`, { method: 'PUT', body }),
 
   listQuotations: (params) => {
     const qs = new URLSearchParams();
@@ -110,6 +115,8 @@ const api = {
     apiFetch(`/quotations/${id}/status`, { method: 'PATCH', body: { status } }),
 
   listSuppliers: (q) => apiFetch(`/suppliers?limit=20${q ? `&q=${encodeURIComponent(q)}` : ''}`),
+  // Whole list, for a <select> that must offer every supplier.
+  listAllSuppliers: () => apiFetch('/suppliers?limit=500'),
 
   listSalesOrders: (params) => apiFetch(`/sales-orders${qs(params)}`),
   getSalesOrder: (id) => apiFetch(`/sales-orders/${id}`),
@@ -293,6 +300,28 @@ function debounce(fn, wait = 250) {
 
 /* ------------------------------------------------------------- chrome  */
 
+/** Is this account an admin? Anything absent is treated as a normal user. */
+function isAdmin(user) {
+  return !!user && user.role === 'admin';
+}
+
+/**
+ * Guard an admin-only page. A normal user is sent to a page that explains the
+ * refusal rather than shown controls every click of which would be refused.
+ *
+ * `what` names the reason so that page can be specific about it; it is looked
+ * up against a whitelist there, never printed as-is.
+ *
+ * replace(), not href: the blocked page must not stay in history, or Back
+ * would land on it and bounce straight here again.
+ */
+function requireAdmin(user, what) {
+  if (isAdmin(user)) return true;
+  const query = what ? `?what=${encodeURIComponent(what)}` : '';
+  window.location.replace(`not-allowed.html${query}`);
+  return false;
+}
+
 /** Redirect to login if there's no session; returns the current user. */
 async function requireLogin() {
   if (!Auth.token) {
@@ -321,7 +350,10 @@ function renderTopbar(activePage, user) {
     { href: 'statement.html', i18n: 'nav.statement', key: 'statement' },
     { href: 'receipts.html', i18n: 'nav.receipts', key: 'receipts' },
     { href: 'reports.html', i18n: 'nav.reports', key: 'reports' },
-  ];
+    // The catalogue is admin-only to edit, so it is admin-only to see.
+    // Hiding the link is a courtesy, not the control - the API is the control.
+    { href: 'products.html', i18n: 'nav.products', key: 'products', admin: true },
+  ].filter((l) => !l.admin || isAdmin(user));
   el.className = 'topbar';
   el.innerHTML = `
     <div class="brand">Q2O <span>| Quotation to Order</span></div>

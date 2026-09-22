@@ -31,7 +31,7 @@
           <label for="fCompany" data-i18n="common.company">Company</label>
           <select id="fCompany"></select>
         </div>
-        <div class="field">
+        <div class="field" id="userField">
           <label for="fUser" data-i18n="report.salesperson">Salesperson</label>
           <select id="fUser"><option value="" data-i18n="common.all">All</option></select>
         </div>
@@ -133,6 +133,8 @@
 
     <!-- ========================================= FINANCIAL ============ -->
     <div id="tab-financial" style="display:none">
+      <div class="alert info hidden" id="finScope"></div>
+
       <div class="kpis" style="margin-bottom:16px" id="finKpis"></div>
 
       <div class="alert info" id="finNote"></div>

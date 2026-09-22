@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Not allowed &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="card denied">
+      <div class="body">
+        <div class="lock" aria-hidden="true">&#128274;</div>
+
+        <h1 data-i18n="denied.title">Not allowed</h1>
+
+        <!-- Filled from a whitelist of known reasons, never from raw URL text. -->
+        <p class="reason" id="reason"></p>
+
+        <p class="hint" id="who"></p>
+
+        <div class="actions">
+          <a class="btn primary" href="quotations.html"
+             data-i18n="denied.back">Back to quotations</a>
+          <button class="btn" type="button" id="signOutBtn"
+                  data-i18n="denied.switch">Sign in as someone else</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/not-allowed.js"></script>
+</body>
+</html>

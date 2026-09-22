@@ -36,8 +36,8 @@ so there is nothing else to start. API docs: <http://localhost:8000/docs>.
 
 | Username | Password   | Role  | Can do |
 |----------|------------|-------|--------|
-| `admin`  | `admin123` | admin | Everything, including editing other people's documents |
-| `budi`   | `budi123`  | user  | Sees everything, edits only what they created |
+| `admin`  | `admin123` | admin | Everything: other people's documents, plus the product catalogue |
+| `budi`   | `budi123`  | user  | Sees everything, edits only what they created; cannot add products |
 | `sari`   | `sari123`  | user  | Same |
 | `agus`   | `agus123`  | user  | Same |
 
@@ -171,8 +171,35 @@ There are exactly **two roles**.
 - **A normal user can only change what they created.** Editing, status changes and
   deletion of someone else's document return 403; the UI greys those rows (🔒) and
   opens them read-only with a banner.
-- **An admin can change anything.** That is the only difference between the roles.
-- Products, customers and suppliers are shared master data any user may maintain.
+- **An admin can change anything.** Documents, whoever created them.
+- **Only an admin maintains the product catalogue.** `POST /products` and
+  `PUT /products/{id}` return 403 for a normal user, and the **Products** page
+  in the top bar is only shown to admins. The catalogue is the price list every
+  quotation is built from, so a wrong code or price would leak into every
+  document that used it — sales staff sell from the catalogue, they do not
+  decide what is in it. Reading it stays open to everyone: you cannot quote a
+  product you cannot see.
+- Companies are admin-only to add or edit, for the same reason.
+- **The financial report is scoped to whoever is asking.** An admin gets the
+  whole business; a normal user gets revenue, cost and margin for the invoices
+  *they* raised, and nothing else. Asking for a colleague by name
+  (`?created_by=`) returns 403 rather than quietly handing back your own
+  numbers — a figure you believe is someone else's is worse than an error. The
+  response carries `is_whole_business` and `scoped_to_user_name` so a partial
+  report can never be mistaken for the company's performance; the page prints
+  a banner saying whose figures they are, and hides the salesperson filter for
+  a user who cannot use it. Note that purchase cost not linked to any invoice
+  is whole-business overhead, so it appears only in an admin's report.
+- **A blocked page explains itself.** Opening an admin-only page as a normal
+  user lands on `not-allowed.html`, which names what was refused and says to
+  ask an admin — rather than a bare error or a silent bounce elsewhere. It
+  replaces the history entry, so Back does not loop. Refusals of a single
+  *action* (editing someone else's quotation, say) stay as an inline message
+  on the page you are already on: navigating away would throw away your work.
+- The **sales report** is still visible in full to everyone — it is activity
+  (quotation counts, conversion, what is selling), not anyone's earnings.
+- Customers and suppliers stay shared master data any user may maintain — sales
+  staff meet new ones daily.
 
 ## Putting your company on the PDFs
 

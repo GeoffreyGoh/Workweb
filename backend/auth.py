@@ -31,8 +31,13 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Two kinds of account. Everyone sees every document; the only thing an
-# 'admin' can do that a 'user' cannot is edit documents somebody else created.
+# Two kinds of account. Everyone sees every document and every product; an
+# 'admin' additionally may
+#   - edit documents somebody else created,
+#   - add or edit products in the catalogue,
+#   - add or edit companies.
+# A 'user' is sales staff: they quote and sell from the catalogue, they do
+# not decide what is in it.
 ROLES = ("admin", "user")
 
 

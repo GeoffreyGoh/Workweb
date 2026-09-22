@@ -1,7 +1,9 @@
 """The two-role model.
 
-Everyone sees everything. A normal user may only change what they created;
-an admin may change anything. That is the whole rule.
+Everyone sees everything. A normal user may only change documents they
+created; an admin may change anything. On top of that, the product catalogue
+and the company list are admin-only to write - a normal user sells from the
+catalogue but does not decide what is in it.
 """
 
 import pytest
@@ -175,14 +177,61 @@ class TestReceiptOwnership:
         assert client.delete(f"/receipts/{receipt['id']}", headers=admin).status_code == 204
 
 
-class TestSharedMasterData:
-    """Only quotations are protected - master data is everyone's."""
+class TestProductCatalogueIsAdminOnly:
+    """The catalogue is the price list every quotation is built from, so
+    sales staff read it and only an admin changes it."""
 
-    def test_a_normal_user_may_add_a_product(self, client, budi):
-        response = client.post("/products", headers=budi, json={
-            "code": "NEW-1", "name": "New Product",
-            "price_unit": "per_unit", "unit_price": 1000})
+    NEW = {"code": "NEW-1", "name": "New Product",
+           "price_unit": "per_unit", "unit_price": 1000}
+
+    def test_an_admin_may_add_a_product(self, client, admin):
+        assert client.post("/products", headers=admin, json=self.NEW).status_code == 201
+
+    def test_a_normal_user_may_not_add_a_product(self, client, budi):
+        response = client.post("/products", headers=budi, json=self.NEW)
+        assert response.status_code == 403
+        assert "admin" in response.json()["detail"]
+
+    def test_a_rejected_product_is_not_written(self, client, budi, admin):
+        client.post("/products", headers=budi, json=self.NEW)
+        assert client.get("/products?q=NEW-1", headers=admin).json() == []
+
+    def test_an_admin_may_edit_a_product(self, client, admin, products):
+        response = client.put(f"/products/{products['sqm'].id}", headers=admin,
+                              json={"unit_price": 999})
+        assert response.status_code == 200
+
+    def test_a_normal_user_may_not_edit_a_product(self, client, budi, products):
+        response = client.put(f"/products/{products['sqm'].id}", headers=budi,
+                              json={"unit_price": 999})
+        assert response.status_code == 403
+
+    def test_a_normal_user_may_not_retire_a_product(self, client, budi, products):
+        """is_active=false is a deletion in everything but name."""
+        response = client.put(f"/products/{products['sqm'].id}", headers=budi,
+                              json={"is_active": False})
+        assert response.status_code == 403
+
+    def test_a_normal_user_still_reads_the_catalogue(self, client, budi, products):
+        """Sales staff cannot quote what they cannot see."""
+        assert client.get("/products", headers=budi).status_code == 200
+        assert client.get(f"/products/{products['sqm'].id}",
+                          headers=budi).status_code == 200
+
+    def test_a_normal_user_still_quotes_from_the_catalogue(self, client, budi,
+                                                           customer, products):
+        response = client.post("/quotations", headers=budi, json={
+            "customer_id": customer.id,
+            "items": [{"product_id": products["unit"].id, "quantity": 1}]})
         assert response.status_code == 201
+
+    def test_an_anonymous_caller_is_401_not_403(self, client, users):
+        """No token at all is an authentication failure, not a role failure."""
+        assert client.post("/products", json=self.NEW).status_code == 401
+
+
+class TestSharedMasterData:
+    """Customers and suppliers stay open - sales staff meet new ones daily."""
 
     def test_a_normal_user_may_add_a_customer(self, client, budi):
         response = client.post("/customers", headers=budi,

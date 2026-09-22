@@ -290,8 +290,8 @@ def seed(with_demo: bool = False, reset: bool = False):
         for company in db.query(models.Company).order_by(models.Company.code).all():
             print(f"  {company.code}: {company.name}")
         print()
-        print("  admin / admin123   (admin, TRI - can edit anyone's documents)")
-        print("  budi  / budi123    (user, ACC - can edit only their own)")
+        print("  admin / admin123   (admin, TRI - anyone's documents, plus products)")
+        print("  budi  / budi123    (user, ACC - only their own, no product edits)")
         print("  sari  / sari123    (user, MIL)")
         print("  agus  / agus123    (user, TRI)")
     finally:

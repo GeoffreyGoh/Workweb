@@ -1,4 +1,11 @@
-/* Sales and financial reports. All figures are netto (pre-PPN). */
+/* Sales and financial reports. All figures are netto (pre-PPN).
+
+   The financial report is scoped by the API: an admin gets the whole
+   business, anyone else gets only the invoices they raised. The page reads
+   `scoped_to_*` off the response and says so rather than letting a partial
+   report be mistaken for the company's performance. */
+
+let viewer = null;
 
 const range = { date_from: '', date_to: '', created_by: '', customer_id: '',
                 company_id: '' };
@@ -106,9 +113,32 @@ async function loadSales() {
 
 /* ---------------------------------------------------------- financial */
 
+/**
+ * A financial report that covers one person must never read as the whole
+ * company's performance, so label it explicitly.
+ */
+function renderScopeNote(r) {
+  const el = document.getElementById('finScope');
+  if (r.is_whole_business) {
+    el.classList.add('hidden');
+    return;
+  }
+  const mine = r.scoped_to_user_id && viewer && r.scoped_to_user_id === viewer.id;
+  el.innerHTML = mine
+    ? `<strong>${esc(t('report.yourFiguresOnly'))}</strong> ${esc(
+        t('report.yourFiguresHint')
+      )}`
+    : `<strong>${esc(t('report.filteredTo'))} ${esc(
+        r.scoped_to_user_name || '-'
+      )}.</strong>`;
+  el.classList.remove('hidden');
+}
+
 async function loadFinancial() {
   const r = await api.financialReport(range);
   const profitable = Number(r.gross_profit) >= 0;
+
+  renderScopeNote(r);
 
   document.getElementById('finKpis').innerHTML = [
     kpi('Revenue', money(r.revenue), 'invoices, netto'),
@@ -179,6 +209,7 @@ document.querySelectorAll('.tabs button').forEach((button) => {
     document.getElementById('tab-sales').style.display = activeTab === 'sales' ? '' : 'none';
     document.getElementById('tab-financial').style.display =
       activeTab === 'financial' ? '' : 'none';
+    syncUserFilter();
     refresh();
   });
 });
@@ -229,6 +260,19 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   refresh();
 });
 
+/**
+ * The salesperson filter is meaningless on a report already scoped to you,
+ * and picking a colleague there would only earn a 403 - so hide it for a
+ * normal user on the financial tab. The API is what enforces the rule; this
+ * just keeps the page from offering something it cannot deliver.
+ */
+function syncUserFilter() {
+  const field = document.getElementById('userField');
+  if (!field) return;
+  const useless = !isAdmin(viewer) && activeTab === 'financial';
+  field.style.display = useless ? 'none' : '';
+}
+
 /** Populate the salesperson filter once, from the staff list. */
 async function loadUsers() {
   try {
@@ -269,8 +313,10 @@ document.addEventListener('languagechange', refresh);
 (async () => {
   const user = await requireLogin();
   if (!user) return;
+  viewer = user;
   renderTopbar('reports', user);
   await loadUsers();
+  syncUserFilter();
   await loadCompanyOptions(document.getElementById('fCompany'),
                            { allLabel: t('common.allCompanies') });
   refresh();

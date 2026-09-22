@@ -249,15 +249,27 @@ class TestReportFilters:
         report = client.get("/reports/sales", headers=budi).json()
         assert dec(report["by_user"][0]["conversion_rate"]) == dec("25.00")
 
-    def test_financial_report_filters_too(self, client, budi, sari, users,
+    def test_financial_report_filters_too(self, client, budi, sari, admin, users,
                                           make_sales_order):
+        """Only an admin gets the unfiltered view to compare against - a normal
+        user's report is already scoped to themselves."""
         self.live_order(client, budi, make_sales_order)
         self.live_order(client, sari, make_sales_order)
-        everyone = client.get("/reports/financial", headers=budi).json()
+        everyone = client.get("/reports/financial", headers=admin).json()
         just_budi = client.get(f"/reports/financial?created_by={users['budi']}",
-                               headers=budi).json()
+                               headers=admin).json()
+        assert len(everyone["by_order"]) == 2
         assert len(just_budi["by_order"]) == 1
         assert dec(just_budi["revenue"]) < dec(everyone["revenue"])
+
+    def test_a_users_own_report_already_equals_the_filtered_one(
+            self, client, budi, sari, users, make_sales_order):
+        self.live_order(client, budi, make_sales_order)
+        self.live_order(client, sari, make_sales_order)
+        unfiltered = client.get("/reports/financial", headers=budi).json()
+        filtered = client.get(f"/reports/financial?created_by={users['budi']}",
+                              headers=budi).json()
+        assert dec(unfiltered["revenue"]) == dec(filtered["revenue"])
 
 
 # ------------------------------------------------ purchase order per supplier

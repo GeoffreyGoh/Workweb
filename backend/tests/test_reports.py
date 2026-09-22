@@ -172,11 +172,11 @@ class TestFinancialReport:
         assert dec(r["gross_profit"]) == dec("250000.00")
         assert dec(r["margin_pct"]) == dec("25.00")
 
-    def test_both_sides_exclude_ppn(self, client, budi, make_sales_order,
+    def test_both_sides_exclude_ppn(self, client, budi, admin, make_sales_order,
                                     make_purchase_order):
         so = live_order(client, budi, make_sales_order)
         po = live_po(client, budi, make_purchase_order)
-        r = client.get("/reports/financial", headers=budi).json()
+        r = client.get("/reports/financial", headers=admin).json()
         assert dec(r["revenue"]) != dec(so["total"])      # total includes PPN
         assert dec(r["cost"]) != dec(po["total"])
 
@@ -192,23 +192,25 @@ class TestFinancialReport:
         assert dec(r["cost_unlinked"]) == dec("0.00")
 
     def test_unlinked_cost_counts_in_the_total_but_not_per_order(
-            self, client, budi, make_sales_order, make_purchase_order):
+            self, client, budi, admin, make_sales_order, make_purchase_order):
+        """Whole-business view: unlinked overhead belongs to nobody, so only
+        an admin's unscoped report can show it."""
         so = live_order(client, budi, make_sales_order)
         stray = live_po(client, budi, make_purchase_order)   # no sales_order_id
-        r = client.get("/reports/financial", headers=budi).json()
+        r = client.get("/reports/financial", headers=admin).json()
         assert dec(r["cost"]) == dec(stray["subtotal"])
         assert dec(r["cost_unlinked"]) == dec(stray["subtotal"])
         row = next(o for o in r["by_order"] if o["sales_order_id"] == so["id"])
         assert dec(row["cost"]) == dec("0.00")
         assert row["po_count"] == 0
 
-    def test_linked_plus_unlinked_equals_total_cost(self, client, budi,
+    def test_linked_plus_unlinked_equals_total_cost(self, client, budi, admin,
                                                     make_sales_order,
                                                     make_purchase_order):
         so = live_order(client, budi, make_sales_order)
         live_po(client, budi, make_purchase_order, sales_order_id=so["id"])
         live_po(client, budi, make_purchase_order)
-        r = client.get("/reports/financial", headers=budi).json()
+        r = client.get("/reports/financial", headers=admin).json()
         assert dec(r["cost_linked"]) + dec(r["cost_unlinked"]) == dec(r["cost"])
 
     def test_several_pos_on_one_order_add_up(self, client, budi, make_sales_order,
@@ -222,22 +224,22 @@ class TestFinancialReport:
         assert dec(row["cost"]) == dec(a["subtotal"]) + dec(b["subtotal"])
         assert row["po_count"] == 2
 
-    def test_draft_purchase_orders_are_not_cost_yet(self, client, budi,
+    def test_draft_purchase_orders_are_not_cost_yet(self, client, budi, admin,
                                                     make_sales_order,
                                                     make_purchase_order):
         live_order(client, budi, make_sales_order)
         make_purchase_order(budi)   # left as draft
-        r = client.get("/reports/financial", headers=budi).json()
+        r = client.get("/reports/financial", headers=admin).json()
         assert dec(r["cost"]) == dec("0.00")
 
-    def test_cancelled_purchase_orders_are_excluded(self, client, budi,
+    def test_cancelled_purchase_orders_are_excluded(self, client, budi, admin,
                                                     make_sales_order,
                                                     make_purchase_order):
         live_order(client, budi, make_sales_order)
         po = make_purchase_order(budi)
         client.patch(f"/purchase-orders/{po['id']}/status",
                      json={"status": "cancelled"}, headers=budi)
-        r = client.get("/reports/financial", headers=budi).json()
+        r = client.get("/reports/financial", headers=admin).json()
         assert dec(r["cost"]) == dec("0.00")
 
     def test_negative_margin_is_reported_honestly(self, client, budi, products,
@@ -286,3 +288,87 @@ class TestFinancialReport:
         r = client.get("/reports/financial", headers=budi).json()
         span = date.fromisoformat(r["date_to"]) - date.fromisoformat(r["date_from"])
         assert span.days == 365
+
+
+class TestFinancialReportIsScopedToTheCaller:
+    """Revenue, cost and margin across the whole business is the admin's
+    view. A normal user sees the orders they raised and nothing else."""
+
+    def test_a_user_sees_only_their_own_revenue(self, client, budi, sari,
+                                                make_sales_order):
+        mine = live_order(client, budi, make_sales_order)
+        live_order(client, sari, make_sales_order)
+        r = client.get("/reports/financial", headers=budi).json()
+        assert dec(r["revenue"]) == dec(mine["netto"])
+
+    def test_an_admin_sees_everyones_revenue(self, client, budi, sari, admin,
+                                             make_sales_order):
+        a = live_order(client, budi, make_sales_order)
+        b = live_order(client, sari, make_sales_order)
+        r = client.get("/reports/financial", headers=admin).json()
+        assert dec(r["revenue"]) == dec(a["netto"]) + dec(b["netto"])
+
+    def test_a_users_invoice_list_excludes_colleagues_orders(
+            self, client, budi, sari, make_sales_order):
+        mine = live_order(client, budi, make_sales_order)
+        theirs = live_order(client, sari, make_sales_order)
+        rows = client.get("/reports/financial", headers=budi).json()["by_order"]
+        ids = [row["sales_order_id"] for row in rows]
+        assert ids == [mine["id"]]
+        assert theirs["id"] not in ids
+
+    def test_a_user_does_not_see_a_colleagues_margin(self, client, sari, budi,
+                                                     make_sales_order,
+                                                     make_purchase_order):
+        so = live_order(client, sari, make_sales_order)
+        live_po(client, sari, make_purchase_order, sales_order_id=so["id"])
+        r = client.get("/reports/financial", headers=budi).json()
+        assert dec(r["revenue"]) == dec("0.00")
+        assert dec(r["cost"]) == dec("0.00")
+
+    def test_collected_and_outstanding_are_scoped_too(self, client, budi, sari,
+                                                      confirmed_order):
+        """The money columns must follow the same rule as the revenue ones."""
+        theirs = confirmed_order(sari)
+        client.post("/receipts", headers=sari,
+                    json={"sales_order_id": theirs["id"], "amount": 500000})
+        r = client.get("/reports/financial", headers=budi).json()
+        assert dec(r["collected"]) == dec("0.00")
+        assert dec(r["outstanding"]) == dec("0.00")
+
+    def test_asking_for_a_colleague_by_name_is_refused(self, client, budi, users):
+        response = client.get(f"/reports/financial?created_by={users['sari']}",
+                              headers=budi)
+        assert response.status_code == 403
+        assert "your own figures" in response.json()["detail"]
+
+    def test_asking_for_your_own_id_is_fine(self, client, budi, users):
+        response = client.get(f"/reports/financial?created_by={users['budi']}",
+                              headers=budi)
+        assert response.status_code == 200
+
+    def test_an_admin_may_still_filter_to_one_salesperson(self, client, budi, sari,
+                                                          admin, make_sales_order):
+        mine = live_order(client, budi, make_sales_order)
+        live_order(client, sari, make_sales_order)
+        r = client.get(f"/reports/financial?created_by={mine['created_by']}",
+                       headers=admin).json()
+        assert dec(r["revenue"]) == dec(mine["netto"])
+
+    def test_the_payload_says_whose_figures_these_are(self, client, budi, users):
+        r = client.get("/reports/financial", headers=budi).json()
+        assert r["scoped_to_user_id"] == users["budi"]
+        assert r["scoped_to_user_name"] == "Budi Santoso"
+        assert r["is_whole_business"] is False
+
+    def test_an_admins_report_is_labelled_whole_business(self, client, admin):
+        r = client.get("/reports/financial", headers=admin).json()
+        assert r["is_whole_business"] is True
+        assert r["scoped_to_user_id"] is None
+
+    def test_an_admin_filtering_is_not_labelled_whole_business(self, client, admin,
+                                                               users):
+        r = client.get(f"/reports/financial?created_by={users['budi']}",
+                       headers=admin).json()
+        assert r["is_whole_business"] is False
+        assert r["scoped_to_user_name"] == "Budi Santoso"

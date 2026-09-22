@@ -150,6 +150,7 @@ a { color: var(--navy-600); }
   gap: 12px;
 }
 .card > header .spacer { flex: 1; }
+.card.hidden { display: none; }
 .card .body { padding: 16px; }
 
 /* ------------------------------------------------------------- forms --- */
@@ -198,6 +199,7 @@ input:disabled, input[readonly] {
 input.num, td input.num { text-align: right; }
 
 .hint { font-size: 11px; color: var(--text-dim); }
+.hint.hidden { display: none; }
 
 /* ----------------------------------------------------------- buttons --- */
 .btn {
@@ -489,6 +491,27 @@ tr.not-mine td:first-child::after {
 
 .num-pos { color: var(--ok); }
 .num-neg { color: var(--danger); }
+
+/* --------------------------------------------------------- not allowed -- */
+.denied {
+  max-width: 520px;
+  margin: 48px auto;
+  text-align: center;
+}
+.denied .body { padding: 32px 28px; }
+.denied .lock { font-size: 34px; line-height: 1; margin-bottom: 14px; }
+.denied h1 {
+  font-size: 19px;
+  margin: 0 0 10px;
+  color: var(--navy-800);
+}
+.denied .reason {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+.denied .hint { margin: 0 0 22px; }
+.denied .actions { display: flex; gap: 8px; justify-content: center; }
 
 /* -------------------------------------------------------------- login -- */
 .login-page {

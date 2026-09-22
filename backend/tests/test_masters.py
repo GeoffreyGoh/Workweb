@@ -10,8 +10,8 @@ from conftest import dec
 
 
 class TestProducts:
-    def test_create_and_read_back(self, client, budi):
-        created = client.post("/products", headers=budi, json={
+    def test_create_and_read_back(self, client, admin, budi):
+        created = client.post("/products", headers=admin, json={
             "code": "NEW-1", "name": "Vertical Blind", "category": "Blind",
             "price_unit": "per_sqm", "unit_price": 275000,
             "min_width_cm": 50, "max_width_cm": 400,
@@ -21,20 +21,20 @@ class TestProducts:
         assert dec(fetched["unit_price"]) == dec("275000.00")
         assert dec(fetched["max_width_cm"]) == dec("400.00")
 
-    def test_duplicate_code_is_409(self, client, budi, products):
-        response = client.post("/products", headers=budi, json={
+    def test_duplicate_code_is_409(self, client, admin, products):
+        response = client.post("/products", headers=admin, json={
             "code": "RB-SQM", "name": "Clash", "price_unit": "per_unit",
             "unit_price": 1})
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
-    def test_invalid_price_unit_is_422(self, client, budi):
-        response = client.post("/products", headers=budi, json={
+    def test_invalid_price_unit_is_422(self, client, admin):
+        response = client.post("/products", headers=admin, json={
             "code": "BAD", "name": "Bad", "price_unit": "per_banana", "unit_price": 1})
         assert response.status_code == 422
 
-    def test_negative_price_is_422(self, client, budi):
-        response = client.post("/products", headers=budi, json={
+    def test_negative_price_is_422(self, client, admin):
+        response = client.post("/products", headers=admin, json={
             "code": "BAD", "name": "Bad", "price_unit": "per_unit", "unit_price": -1})
         assert response.status_code == 422
 
@@ -43,15 +43,16 @@ class TestProducts:
         assert len(client.get("/products?q=RB-SQM", headers=budi).json()) == 1
         assert client.get("/products?q=zzz", headers=budi).json() == []
 
-    def test_partial_update_leaves_other_fields_alone(self, client, budi, products):
-        updated = client.put(f"/products/{products['sqm'].id}", headers=budi,
+    def test_partial_update_leaves_other_fields_alone(self, client, admin, products):
+        updated = client.put(f"/products/{products['sqm'].id}", headers=admin,
                              json={"unit_price": 450000}).json()
         assert dec(updated["unit_price"]) == dec("450000.00")
         assert updated["name"] == "Roller Blind"
         assert dec(updated["max_width_cm"]) == dec("300.00")
 
-    def test_inactive_products_are_hidden_by_default(self, client, budi, products):
-        client.put(f"/products/{products['sqm'].id}", headers=budi,
+    def test_inactive_products_are_hidden_by_default(self, client, admin, budi,
+                                                     products):
+        client.put(f"/products/{products['sqm'].id}", headers=admin,
                    json={"is_active": False})
         codes = [p["code"] for p in client.get("/products", headers=budi).json()]
         assert "RB-SQM" not in codes
@@ -184,8 +185,9 @@ class TestNumbering:
 class TestMoneyPrecision:
     """The Dec type stores money as text on SQLite; make sure nothing is lost."""
 
-    def test_large_rupiah_amounts_survive_a_round_trip(self, client, budi, customer):
-        big = client.post("/products", headers=budi, json={
+    def test_large_rupiah_amounts_survive_a_round_trip(self, client, admin, budi,
+                                                       customer):
+        big = client.post("/products", headers=admin, json={
             "code": "BIG", "name": "Big Ticket", "price_unit": "per_unit",
             "unit_price": "987654321.99"}).json()
         assert dec(big["unit_price"]) == dec("987654321.99")

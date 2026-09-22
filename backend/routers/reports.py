@@ -47,6 +47,31 @@ def _pct(numerator: Decimal, denominator: Decimal) -> Decimal:
     return pricing.money(numerator * 100 / denominator)
 
 
+def _scope_to_caller(created_by: Optional[int], user: models.User) -> Optional[int]:
+    """Whose figures may this caller see?
+
+    Revenue, cost and margin across the whole business is the admin's view.
+    A normal user gets their own orders and nothing else - a salesperson has
+    no business reading a colleague's commission-relevant numbers, and the
+    company-wide margin is not theirs to see either.
+
+    Asking for someone else by name is refused outright rather than quietly
+    answered with your own figures: a number you believe is your colleague's
+    is worse than an error.
+    """
+    if auth.is_admin(user):
+        return created_by
+    if created_by is not None and created_by != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "You can only see your own figures. "
+                "Ask an admin for the full report."
+            ),
+        )
+    return user.id
+
+
 @router.get("/sales", response_model=schemas.SalesReport)
 def sales_report(
     date_from: Optional[date] = None,
@@ -227,7 +252,13 @@ def financial_report(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    """Revenue against purchase cost, and the gross margin that falls out."""
+    """Revenue against purchase cost, and the gross margin that falls out.
+
+    Admin sees the whole business. A normal user sees only the orders they
+    raised - `scoped_to_user_id` in the response says which it was, so the
+    reader is never left guessing whose numbers these are.
+    """
+    created_by = _scope_to_caller(created_by, current_user)
     start, end = _default_range(date_from, date_to)
 
     so_query = db.query(models.SalesOrder).filter(
@@ -310,11 +341,15 @@ def financial_report(
     gross_profit = pricing.money(revenue - cost)
 
     company = db.get(models.Company, company_id) if company_id else None
+    scoped_to = db.get(models.User, created_by) if created_by else None
     return schemas.FinancialReport(
         date_from=start,
         date_to=end,
         company_id=company_id,
         company_name=company.name if company else None,
+        scoped_to_user_id=created_by,
+        scoped_to_user_name=scoped_to.full_name if scoped_to else None,
+        is_whole_business=created_by is None,
         revenue=revenue,
         cost=cost,
         gross_profit=gross_profit,

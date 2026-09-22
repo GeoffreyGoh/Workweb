@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Products &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 data-i18n="product.list">Product Catalogue</h1>
+      <div class="spacer"></div>
+      <span class="hint" data-i18n="product.hint">Admin only - this is the price list every quotation is built from</span>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+
+    <div class="card">
+      <div class="body">
+        <div class="filters">
+          <div class="field">
+            <label for="fSearch" data-i18n="common.search">Search</label>
+            <input type="text" id="fSearch" placeholder="Code or name"
+                   data-i18n-placeholder="product.searchHint">
+          </div>
+          <div class="field" style="min-width:auto">
+            <label for="fRetired" data-i18n="product.showRetired">Show retired</label>
+            <input type="checkbox" id="fRetired" style="width:auto">
+          </div>
+          <div class="spacer" style="flex:1"></div>
+          <button class="btn primary" id="addBtn" type="button"
+                  data-i18n="product.add">Add Product</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- The editor doubles as the "add" form; `data-id` says which. -->
+    <div class="card hidden" id="editor">
+      <header>
+        <span id="editorTitle" data-i18n="product.new">New Product</span>
+      </header>
+      <div class="body">
+        <form id="form">
+          <div class="grid">
+            <div class="field">
+              <label for="fCode" data-i18n="product.code">Code</label>
+              <input type="text" id="fCode" maxlength="40" required>
+              <span class="hint hidden" id="codeNote"
+                    data-i18n="product.codeLocked">The code cannot be changed once documents refer to it.</span>
+            </div>
+            <div class="field col-2">
+              <label for="fName" data-i18n="product.name">Name</label>
+              <input type="text" id="fName" maxlength="150" required>
+            </div>
+            <div class="field">
+              <label for="fCategory" data-i18n="product.category">Category</label>
+              <input type="text" id="fCategory" maxlength="60">
+            </div>
+
+            <div class="field">
+              <label for="fPriceUnit" data-i18n="product.priceUnit">Priced By</label>
+              <select id="fPriceUnit">
+                <option value="per_sqm">per sqm</option>
+                <option value="per_meter">per running metre</option>
+                <option value="per_unit">per unit</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="fPrice" data-i18n="product.unitPrice">Unit Price</label>
+              <input type="number" id="fPrice" class="num" min="0" step="0.01" value="0">
+            </div>
+            <div class="field col-2">
+              <label for="fSupplierId" data-i18n="common.supplier">Supplier</label>
+              <select id="fSupplierId"></select>
+            </div>
+
+            <div class="field">
+              <label for="fMinW" data-i18n="product.minWidth">Min Width (cm)</label>
+              <input type="number" id="fMinW" class="num" min="0" step="0.01">
+            </div>
+            <div class="field">
+              <label for="fMaxW" data-i18n="product.maxWidth">Max Width (cm)</label>
+              <input type="number" id="fMaxW" class="num" min="0" step="0.01">
+            </div>
+            <div class="field">
+              <label for="fMinH" data-i18n="product.minHeight">Min Height (cm)</label>
+              <input type="number" id="fMinH" class="num" min="0" step="0.01">
+            </div>
+            <div class="field">
+              <label for="fMaxH" data-i18n="product.maxHeight">Max Height (cm)</label>
+              <input type="number" id="fMaxH" class="num" min="0" step="0.01">
+            </div>
+
+            <div class="field col-3">
+              <label for="fDescription" data-i18n="common.description">Description</label>
+              <textarea id="fDescription"></textarea>
+            </div>
+            <div class="field">
+              <label for="fActive" data-i18n="product.active">Active</label>
+              <input type="checkbox" id="fActive" style="width:auto" checked>
+            </div>
+
+            <div class="field col-4" style="flex-direction:row; gap:8px">
+              <button class="btn primary" type="submit" id="saveBtn"
+                      data-i18n="common.save">Save</button>
+              <button class="btn" type="button" id="cancelBtn"
+                      data-i18n="common.cancel">Cancel</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <header>
+        <span data-i18n="product.list">Product Catalogue</span>
+        <div class="spacer"></div>
+        <span class="hint" id="countNote"></span>
+      </header>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th data-i18n="product.code">Code</th>
+              <th data-i18n="product.name">Name</th>
+              <th data-i18n="product.category">Category</th>
+              <th data-i18n="product.priceUnit">Priced By</th>
+              <th class="right" data-i18n="product.unitPrice">Unit Price</th>
+              <th data-i18n="common.supplier">Supplier</th>
+              <th data-i18n="common.status">Status</th>
+              <th style="width:90px"></th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="8" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/products.js"></script>
+</body>
+</html>
