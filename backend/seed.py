@@ -37,6 +37,7 @@ COMPANIES = [
 # (username, full name, password, role, default company code)
 USERS = [
     ("admin", "Administrator", "admin123", "admin", "TRI"),
+    ("user", "User", "user123", "user", "TRI"),
     ("budi", "Budi Santoso", "budi123", "user", "ACC"),
     ("sari", "Sari Dewi", "sari123", "user", "MIL"),
     ("agus", "Agus Prasetyo", "agus123", "user", "TRI"),
