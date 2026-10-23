@@ -35,20 +35,22 @@ if IS_SQLITE:
     connect_args = {"check_same_thread": False}
 elif IS_MYSQL:
     # Managed MySQL hosts (Aiven, PlanetScale, etc.) often publish a
-    # connection string with an `ssl_mode=REQUIRED` query parameter - that is
-    # the MySQL Connector/Python spelling. PyMySQL (our driver, see
-    # requirements.txt) has no such keyword and forwards every unrecognised
-    # URL query param straight to pymysql.connect(), which raises
-    # `TypeError: unexpected keyword argument 'ssl_mode'` instead of a
-    # connection error. Strip it from the URL - harmless if absent - and ask
-    # PyMySQL for TLS the way it actually understands: a (possibly empty)
-    # `ssl` dict in connect_args enables an encrypted connection without
-    # requiring a bundled CA file, which matches the "just require TLS"
-    # intent of ssl_mode=REQUIRED for a well-known provider CA.
+    # connection string with an SSL query parameter in a spelling PyMySQL
+    # (our driver, see requirements.txt) does not recognise - MySQL's own
+    # URI convention is the hyphenated `ssl-mode` (seen from Aiven in
+    # practice), while MySQL Connector/Python code elsewhere online uses
+    # `ssl_mode`, and some providers just send `ssl=true`. SQLAlchemy
+    # forwards any unrecognised query param straight to pymysql.connect(),
+    # which raises `TypeError: unexpected keyword argument '...'` instead of
+    # a connection error - so strip every spelling we've hit (a no-op if
+    # none are present) and ask PyMySQL for TLS the way it actually
+    # understands: a (possibly empty) `ssl` dict in connect_args enables an
+    # encrypted connection without needing a bundled CA file, which matches
+    # the "just require TLS" intent behind all of these spellings.
+    SSL_PARAM_NAMES = ("ssl-mode", "ssl_mode", "ssl")
     url = make_url(DATABASE_URL)
-    if "ssl_mode" in url.query:
-        query = dict(url.query)
-        query.pop("ssl_mode", None)
+    if any(name in url.query for name in SSL_PARAM_NAMES):
+        query = {k: v for k, v in url.query.items() if k not in SSL_PARAM_NAMES}
         url = url.set(query=query)
         DATABASE_URL = str(url)
     connect_args = {"ssl": {}}
