@@ -16,12 +16,22 @@ Totals model (matches the legacy quotation screen):
     total           = netto + ppn_amount
 """
 
-from decimal import ROUND_HALF_UP, Decimal
+import math
+from decimal import ROUND_HALF_UP, ROUND_UP, Decimal
 
 CENT = Decimal("0.01")
 FOUR = Decimal("0.0001")
+HALF = Decimal("0.5")
 
-PRICE_UNITS = ("per_sqm", "per_unit", "per_meter")
+# per_sqm_min1m  - blinds/shades priced by area, each side floored at 1m
+#                  before multiplying (client formula sheet, "RUMUS BLINDS").
+# per_curtain_panel - curtains priced by fabric consumption in running
+#                  metres, derived from the number of 0.6m-wide panels needed
+#                  to cover the window (client formula sheet, "RUMUS GORDEN").
+PRICE_UNITS = (
+    "per_sqm", "per_unit", "per_meter",
+    "per_sqm_min1m", "per_curtain_panel",
+)
 
 
 def money(value) -> Decimal:
@@ -42,8 +52,10 @@ def validate_dimensions(product, width_cm, height_cm, line_no: int) -> None:
     Only dimensions the product actually prices on are required. A NULL bound
     on the product means "no limit on that side".
     """
-    needs_width = product.price_unit in ("per_sqm", "per_meter")
-    needs_height = product.price_unit == "per_sqm"
+    needs_width = product.price_unit in (
+        "per_sqm", "per_meter", "per_sqm_min1m", "per_curtain_panel",
+    )
+    needs_height = product.price_unit in ("per_sqm", "per_sqm_min1m", "per_curtain_panel")
 
     def fail(msg):
         raise PricingError(f"Line {line_no} ({product.code}): {msg}")
@@ -65,8 +77,12 @@ def validate_dimensions(product, width_cm, height_cm, line_no: int) -> None:
             fail(f"height {height_cm} cm exceeds the maximum {product.max_height_cm} cm")
 
 
-def compute_measure(price_unit: str, quantity, width_cm, height_cm) -> Decimal:
-    """Billable quantity for a line, in the product's pricing unit."""
+def compute_measure(price_unit: str, quantity, width_cm, height_cm, fabric_width_cm=None) -> Decimal:
+    """Billable quantity for a line, in the product's pricing unit.
+
+    `fabric_width_cm` only matters for per_curtain_panel (the roll width of
+    the specific curtain fabric); every other unit ignores it.
+    """
     quantity = Decimal(str(quantity))
 
     if price_unit == "per_sqm":
@@ -77,7 +93,55 @@ def compute_measure(price_unit: str, quantity, width_cm, height_cm) -> Decimal:
     if price_unit == "per_unit":
         return measure4(quantity)
 
+    if price_unit == "per_sqm_min1m":
+        # "RUMUS BLINDS": both width and height are floored at 1m / 100cm
+        # before multiplying, even if the real measurement is smaller. A
+        # 75cm-wide blind is billed as if it were 100cm wide.
+        width_m = max(Decimal(str(width_cm)), Decimal("100")) / 100
+        height_m = max(Decimal(str(height_cm)), Decimal("100")) / 100
+        return measure4(width_m * height_m * quantity)
+
+    if price_unit == "per_curtain_panel":
+        # "RUMUS GORDEN": panels = width / 0.6m, rounded UP to a whole panel.
+        # A wider fabric roll (280cm vs 140cm) covers two panels at once, so
+        # halve the panel count (still rounded up) when fabric_width_cm=280.
+        width_cm_d = Decimal(str(width_cm))
+        panels = math.ceil(width_cm_d / Decimal("60"))
+        if fabric_width_cm is not None and Decimal(str(fabric_width_cm)) >= 280:
+            panels = math.ceil(Decimal(str(panels)) / 2)
+        panels = Decimal(panels)
+
+        # metres = (height + 30cm seam allowance) x panels + 40cm for the belt/strap,
+        # then rounded UP to the nearest half metre (matches both worked examples:
+        # 15.76 -> 16m, and 8.08 -> 8.5m).
+        height_m = Decimal(str(height_cm)) / 100
+        raw_metres = (height_m + Decimal("0.3")) * panels + Decimal("0.4")
+        rounded = (raw_metres / HALF).to_integral_value(rounding=ROUND_UP) * HALF
+        return measure4(rounded * quantity)
+
     raise PricingError(f"Unknown price_unit '{price_unit}'")
+
+
+def resolve_option_price(product, component_options: str):
+    """Look up a per-mechanism price override from the chosen component(s).
+
+    `component_options` is the "Group: Name | Group2: Name2" string the line
+    editor builds (see frontend/js/line-editor.js readComponents). Only a
+    match against one of the product's loaded ProductOption rows with a
+    non-NULL unit_price counts - everything else falls back to the product's
+    own price, which is the existing behaviour.
+    """
+    if not component_options:
+        return None
+    chosen = {}
+    for part in component_options.split("|"):
+        bits = part.split(":")
+        if len(bits) == 2:
+            chosen[bits[0].strip()] = bits[1].strip()
+    for option in getattr(product, "options", []) or []:
+        if chosen.get(option.option_group) == option.option_name and option.unit_price is not None:
+            return option.unit_price
+    return None
 
 
 def price_line(product, item, header_discount_pct: Decimal, line_no: int) -> dict:
@@ -92,10 +156,21 @@ def price_line(product, item, header_discount_pct: Decimal, line_no: int) -> dic
 
     validate_dimensions(product, item.width_cm, item.height_cm, line_no)
 
-    measure = compute_measure(product.price_unit, quantity, item.width_cm, item.height_cm)
+    measure = compute_measure(
+        product.price_unit, quantity, item.width_cm, item.height_cm,
+        fabric_width_cm=getattr(product, "fabric_width_cm", None),
+    )
 
-    # A manual unit price is allowed (special deals), otherwise use the master.
-    unit_price = money(item.unit_price) if item.unit_price is not None else money(product.unit_price)
+    # Precedence: explicit manual override > the selected option's own price
+    # (e.g. Panel Glide "Classic" prices differently from "Villa") > the
+    # product's base price.
+    option_price = resolve_option_price(product, getattr(item, "component_options", None))
+    if item.unit_price is not None:
+        unit_price = money(item.unit_price)
+    elif option_price is not None:
+        unit_price = money(option_price)
+    else:
+        unit_price = money(product.unit_price)
 
     effective_pct = (
         Decimal(str(item.line_discount_pct))

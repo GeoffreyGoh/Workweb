@@ -6,7 +6,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-PriceUnit = Literal["per_sqm", "per_unit", "per_meter"]
+PriceUnit = Literal["per_sqm", "per_unit", "per_meter", "per_sqm_min1m", "per_curtain_panel"]
 Role = Literal["admin", "user"]
 QuotationStatus = Literal["draft", "sent", "approved", "converted", "cancelled"]
 SalesOrderStatus = Literal[
@@ -99,6 +99,9 @@ class ProductBase(BaseModel):
     max_width_cm: Optional[Decimal] = Field(default=None, ge=0)
     min_height_cm: Optional[Decimal] = Field(default=None, ge=0)
     max_height_cm: Optional[Decimal] = Field(default=None, ge=0)
+    # Curtain fabric roll width in cm (140 or 280); only meaningful for
+    # price_unit='per_curtain_panel'.
+    fabric_width_cm: Optional[Decimal] = Field(default=None, ge=0)
     description: Optional[str] = None
     is_active: bool = True
     # Default supplier, used to split purchase orders per supplier.
@@ -119,6 +122,7 @@ class ProductUpdate(BaseModel):
     max_width_cm: Optional[Decimal] = Field(default=None, ge=0)
     min_height_cm: Optional[Decimal] = Field(default=None, ge=0)
     max_height_cm: Optional[Decimal] = Field(default=None, ge=0)
+    fabric_width_cm: Optional[Decimal] = Field(default=None, ge=0)
     description: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -127,6 +131,7 @@ class ProductOptionOut(ORMModel):
     option_group: str
     option_name: str
     is_available: bool
+    unit_price: Optional[Decimal] = None
 
 
 class ProductOut(ORMModel, ProductBase):

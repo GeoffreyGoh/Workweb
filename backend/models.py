@@ -149,6 +149,11 @@ class Product(Base):
     max_width_cm = Column(Qty())
     min_height_cm = Column(Qty())
     max_height_cm = Column(Qty())
+    # Curtain fabric roll width (140 or 280 cm). Only meaningful for
+    # price_unit='per_curtain_panel' - a wider roll halves the panel count
+    # for the same window width (see pricing.compute_measure). NULL for
+    # every other price_unit.
+    fabric_width_cm = Column(Qty())
     description = Column(Text)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -286,6 +291,11 @@ class ProductOption(Base):
     option_group = Column(String(40), nullable=False, index=True)
     option_name = Column(String(60), nullable=False)
     is_available = Column(Boolean, nullable=False, default=True)
+    # Per-mechanism price override. NULL means "use the product's unit_price"
+    # - most options share the product's one price; a few (e.g. Panel Glide
+    # Classic/Sewless/Villa) are priced independently because the mechanism
+    # itself changes the cost, not just the fabric.
+    unit_price = Column(Money())
     source_ref = Column(String(40))
 
     product = relationship("Product", back_populates="options")

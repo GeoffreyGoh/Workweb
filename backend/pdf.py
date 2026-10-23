@@ -345,14 +345,17 @@ def _render(story, company=None) -> bytes:
 
 
 def _dimension_text(line) -> str:
-    if line.price_unit == "per_sqm" and line.width_cm and line.height_cm:
+    if line.price_unit in ("per_sqm", "per_sqm_min1m", "per_curtain_panel") and line.width_cm and line.height_cm:
         return f"{fmt_num(line.width_cm)} x {fmt_num(line.height_cm)}"
     if line.price_unit == "per_meter" and line.width_cm:
         return f"{fmt_num(line.width_cm)}"
     return "-"
 
 
-UNIT_LABEL = {"per_sqm": "m2", "per_meter": "m", "per_unit": "pcs"}
+UNIT_LABEL = {
+    "per_sqm": "m2", "per_meter": "m", "per_unit": "pcs",
+    "per_sqm_min1m": "m2", "per_curtain_panel": "m",
+}
 
 
 # ------------------------------------------------------------------ documents

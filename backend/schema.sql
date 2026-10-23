@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS products (
     code         VARCHAR(40)   NOT NULL,
     name         VARCHAR(150)  NOT NULL,
     category     VARCHAR(60)   NULL,
-    -- per_sqm | per_unit | per_meter
+    -- per_sqm | per_unit | per_meter | per_sqm_min1m | per_curtain_panel
     price_unit   VARCHAR(20)   NOT NULL DEFAULT 'per_sqm',
     unit_price   DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     -- NULL means "no limit on this side"
@@ -98,6 +98,9 @@ CREATE TABLE IF NOT EXISTS products (
     max_width_cm  DECIMAL(10,2) NULL,
     min_height_cm DECIMAL(10,2) NULL,
     max_height_cm DECIMAL(10,2) NULL,
+    -- Curtain fabric roll width (140 or 280 cm). Only used by
+    -- price_unit='per_curtain_panel'; NULL for every other price_unit.
+    fabric_width_cm DECIMAL(10,2) NULL,
     description  TEXT          NULL,
     is_active    TINYINT(1)    NOT NULL DEFAULT 1,
     -- Default supplier. Raising a purchase order from a sales order groups
@@ -124,6 +127,9 @@ CREATE TABLE IF NOT EXISTS product_options (
     option_group VARCHAR(40)  NOT NULL,   -- Roman | Roller | Panel Glide | Vertical
     option_name  VARCHAR(60)  NOT NULL,   -- Classic, Standard Roll, Flat Bottom Rail
     is_available TINYINT(1)   NOT NULL DEFAULT 1,   -- False where the sheet says "x"
+    -- Per-mechanism price override, e.g. Panel Glide Classic/Sewless/Villa
+    -- each cost differently. NULL means "use the product's unit_price".
+    unit_price   DECIMAL(15,2) NULL,
     source_ref   VARCHAR(40)  NULL,
 
     KEY ix_popt_product (product_id),
