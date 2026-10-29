@@ -27,6 +27,12 @@ IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"
 DATABASE_URL = os.getenv("DATABASE_URL") or (
     "sqlite:////tmp/q2o.db" if IS_SERVERLESS else "sqlite:///./q2o.db"
 )
+# Defensive strip: a value pasted into a dashboard text box can carry a
+# trailing newline, stray space, or surrounding quotes that are invisible
+# in the UI but change the actual bytes sent to the driver - a stray
+# character tacked onto the end of the password would make MySQL report
+# "Access denied" even though the password looks identical on screen.
+DATABASE_URL = DATABASE_URL.strip().strip("'\"")
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 IS_MYSQL = DATABASE_URL.startswith("mysql")
 

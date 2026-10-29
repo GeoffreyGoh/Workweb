@@ -72,6 +72,32 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/health/db", tags=["meta"])
+def health_db(db: Session = Depends(get_db)):
+    """Round-trip the actual database connection and report what happened.
+
+    Deliberately temporary - added to shortcut the dashboard-log-screenshot
+    loop while diagnosing a production DB connection issue; safe to remove
+    once things are stable, since it leaks no secrets (no password, no
+    connection string) but does confirm whether the DB is reachable at all.
+    """
+    from sqlalchemy import text
+
+    import database
+
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "database connection succeeded"}
+    except Exception as exc:  # noqa: BLE001 - intentionally broad, this is a diagnostic
+        return {
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "error_message": str(exc),
+            "is_mysql": database.IS_MYSQL,
+            "is_sqlite": database.IS_SQLITE,
+        }
+
+
 app.include_router(companies.router)
 app.include_router(products.router)
 app.include_router(customers.router)
