@@ -100,22 +100,12 @@ def health_db(db: Session = Depends(get_db)):
 
 @app.get("/health/db-variants", tags=["meta"])
 def health_db_variants():
-    """Try several connection strategies against the same DATABASE_URL.
+    """Try several MySQL connection strategies against the same DATABASE_URL.
 
-    The standing connection in `database.engine` keeps failing with MySQL
-    error 1045 (Access denied) from Vercel specifically, even though the
-    identical credentials work from a local machine. That symptom is the
-    classic signature of `caching_sha2_password` (MySQL 8's default auth
-    plugin) needing a fully negotiated TLS channel or the server's RSA
-    public key to transmit the password securely - if the environment's
-    OpenSSL/cryptography build can't complete that handshake the same way
-    a desktop Python can, MySQL reports it as a wrong password rather than
-    a TLS failure, which is exactly what we have been seeing.
-
-    This tries three PyMySQL connect_args variants directly (bypassing the
-    pooled engine) and reports which ones succeed, so the real fix can be
-    picked in one round trip instead of guessing through more redeploys.
-    Temporary; safe to remove once the connection is stable.
+    MySQL-only diagnostic from the Aiven outage investigation - skips
+    cleanly on Postgres/Neon, which doesn't share any of the SSL-spelling or
+    caching_sha2_password quirks this was built to isolate. Temporary; safe
+    to remove once connectivity is confirmed stable long-term.
     """
     import pymysql
     from sqlalchemy.engine import make_url

@@ -8,6 +8,11 @@ passlib==1.7.4
 # Do not bump without also replacing passlib.
 bcrypt==4.0.1
 PyMySQL==1.1.1
+# psycopg2-binary: driver for Postgres (Neon). The "-binary" build ships a
+# precompiled libpq so there's no C toolchain needed to install it - fine for
+# an app server, not recommended for a library meant to be pip-installed by
+# others, which doesn't apply here.
+psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 reportlab==4.2.5
 openpyxl==3.1.5

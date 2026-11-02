@@ -19,3 +19,5 @@ desktop.ini
 
 # pytest
 .pytest_cache/
+.neon
+node_modules/

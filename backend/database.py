@@ -3,9 +3,15 @@
 Local dev defaults to SQLite so there's nothing to install. Production sets
 DATABASE_URL to the managed database, e.g.
 
+    DATABASE_URL=postgresql://user:***@host/dbname?sslmode=require
+
+(Neon's own dashboard gives you this exact string - copy it as-is.) MySQL is
+still supported for anyone not on Neon:
+
     DATABASE_URL=mysql+pymysql://user:***@host:3306/q2o?charset=utf8mb4
 
-Same code either way.
+Same code either way - models.py and migrate.py are plain SQLAlchemy with no
+dialect-specific types, so switching providers is just a new DATABASE_URL.
 """
 
 import os
@@ -35,10 +41,19 @@ DATABASE_URL = os.getenv("DATABASE_URL") or (
 DATABASE_URL = DATABASE_URL.strip().strip("'\"")
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 IS_MYSQL = DATABASE_URL.startswith("mysql")
+IS_POSTGRES = DATABASE_URL.startswith("postgres")
 
 connect_args = {}
 if IS_SQLITE:
     connect_args = {"check_same_thread": False}
+elif IS_POSTGRES:
+    # Neon (and most managed Postgres providers) hand out a bare
+    # "postgresql://..." or "postgres://..." URL with no driver named -
+    # SQLAlchemy then needs psycopg2 (or psycopg) installed, which
+    # requirements.txt pins. sslmode=require is already baked into Neon's
+    # URL as a query param, which both drivers understand natively, so
+    # unlike MySQL there is no spelling mismatch to strip here.
+    pass
 elif IS_MYSQL:
     # Managed MySQL hosts (Aiven, PlanetScale, etc.) often publish a
     # connection string with an SSL query parameter in a spelling PyMySQL
