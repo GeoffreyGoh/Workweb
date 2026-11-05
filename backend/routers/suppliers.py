@@ -28,8 +28,10 @@ def list_suppliers(
         query = query.filter(models.Supplier.is_active.is_(True))
     if q:
         term = f"%{q}%"
+        # ilike for the same reason as customers.py - LIKE is case-sensitive
+        # on Postgres but not on MySQL's default collation.
         query = query.filter(
-            or_(models.Supplier.code.like(term), models.Supplier.name.like(term))
+            or_(models.Supplier.code.ilike(term), models.Supplier.name.ilike(term))
         )
     return query.order_by(models.Supplier.name).offset(offset).limit(limit).all()
 

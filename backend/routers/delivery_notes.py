@@ -217,7 +217,9 @@ def list_delivery_notes(
     if company_id:
         query = query.filter(models.DeliveryNote.company_id == company_id)
     if q:
-        query = query.filter(models.DeliveryNote.sj_no.like(f"%{q}%"))
+        # ilike: LIKE is case-sensitive on Postgres but not on MySQL's
+        # default collation - same fix as customers.py/products.py.
+        query = query.filter(models.DeliveryNote.sj_no.ilike(f"%{q}%"))
     if date_from:
         query = query.filter(models.DeliveryNote.delivery_date >= date_from)
     if date_to:
@@ -474,7 +476,9 @@ def schedule(
         models.DeliveryNote.delivery_date <= end,
     )
     if driver:
-        query = query.filter(models.DeliveryNote.driver_name.like(f"%{driver}%"))
+        # ilike: LIKE is case-sensitive on Postgres but not on MySQL's
+        # default collation - same fix as customers.py/products.py.
+        query = query.filter(models.DeliveryNote.driver_name.ilike(f"%{driver}%"))
     if company_id:
         query = query.filter(models.DeliveryNote.company_id == company_id)
     notes = query.all()

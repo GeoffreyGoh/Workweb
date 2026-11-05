@@ -56,7 +56,9 @@ def list_receipts(
     if company_id:
         query = query.filter(models.Receipt.company_id == company_id)
     if q:
-        query = query.filter(models.Receipt.receipt_no.like(f"%{q}%"))
+        # ilike: LIKE is case-sensitive on Postgres but not on MySQL's
+        # default collation - same fix as customers.py/products.py.
+        query = query.filter(models.Receipt.receipt_no.ilike(f"%{q}%"))
     if date_from:
         query = query.filter(models.Receipt.receipt_date >= date_from)
     if date_to:

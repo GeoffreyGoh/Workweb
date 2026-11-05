@@ -107,7 +107,9 @@ def list_purchase_orders(
     if sales_order_id:
         query = query.filter(models.PurchaseOrder.sales_order_id == sales_order_id)
     if q:
-        query = query.filter(models.PurchaseOrder.po_no.like(f"%{q}%"))
+        # ilike: LIKE is case-sensitive on Postgres but not on MySQL's
+        # default collation - same fix as customers.py/products.py.
+        query = query.filter(models.PurchaseOrder.po_no.ilike(f"%{q}%"))
     if date_from:
         query = query.filter(models.PurchaseOrder.order_date >= date_from)
     if date_to:

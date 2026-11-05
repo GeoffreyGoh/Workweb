@@ -136,7 +136,9 @@ def list_quotations(
     if company_id:
         query = query.filter(models.Quotation.company_id == company_id)
     if q:
-        query = query.filter(models.Quotation.quotation_no.like(f"%{q}%"))
+        # ilike: LIKE is case-sensitive on Postgres but not on MySQL's
+        # default collation - same fix as customers.py/products.py.
+        query = query.filter(models.Quotation.quotation_no.ilike(f"%{q}%"))
     if date_from:
         query = query.filter(models.Quotation.quotation_date >= date_from)
     if date_to:

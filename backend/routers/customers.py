@@ -28,8 +28,13 @@ def list_customers(
         query = query.filter(models.Customer.is_active.is_(True))
     if q:
         term = f"%{q}%"
+        # ilike, not like: plain LIKE is case-sensitive on Postgres (Neon)
+        # even though it happened to be case-insensitive on MySQL's default
+        # collation, so this search silently broke for anything not typed
+        # in the exact stored case after the database switch. ilike
+        # compiles to a case-insensitive comparison on every backend.
         query = query.filter(
-            or_(models.Customer.code.like(term), models.Customer.name.like(term))
+            or_(models.Customer.code.ilike(term), models.Customer.name.ilike(term))
         )
     return query.order_by(models.Customer.name).offset(offset).limit(limit).all()
 

@@ -41,8 +41,10 @@ def list_products(
         query = query.filter(models.Product.is_active.is_(True))
     if q:
         term = f"%{q}%"
+        # ilike for the same reason as customers.py - LIKE is case-sensitive
+        # on Postgres but not on MySQL's default collation.
         query = query.filter(
-            or_(models.Product.code.like(term), models.Product.name.like(term))
+            or_(models.Product.code.ilike(term), models.Product.name.ilike(term))
         )
     rows = query.order_by(models.Product.name).offset(offset).limit(limit).all()
     return [_to_out(row) for row in rows]
