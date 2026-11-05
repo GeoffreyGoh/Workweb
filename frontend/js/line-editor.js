@@ -48,6 +48,23 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   };
   const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+  /**
+   * Which dimension inputs a price_unit needs.
+   *
+   * Single source of truth for this - previously duplicated separately in
+   * selectProduct() and setRowReadonly(), and the second copy was missed
+   * when per_sqm_min1m/per_curtain_panel were added to pricing.py, which
+   * silently disabled and blanked Width/Height for every product using
+   * either formula (blinds and curtains - most of the real catalogue).
+   * Must stay in sync with pricing.compute_measure's price_unit branches.
+   */
+  function dimensionsNeeded(priceUnit) {
+    return {
+      width: ['per_sqm', 'per_meter', 'per_sqm_min1m', 'per_curtain_panel'].includes(priceUnit),
+      height: ['per_sqm', 'per_sqm_min1m', 'per_curtain_panel'].includes(priceUnit),
+    };
+  }
+
   function computeLine(line, headerDiscount) {
     if (!line.product) {
       return { measure: 0, lineTotal: 0, discount: 0, net: 0, qty: num(line.refs.qty.value) };
@@ -58,9 +75,30 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     const price = num(line.refs.price.value);
 
     let measure = 0;
-    if (line.product.price_unit === 'per_sqm') measure = (width / 100) * (height / 100) * qty;
-    else if (line.product.price_unit === 'per_meter') measure = (width / 100) * qty;
-    else measure = qty;
+    if (line.product.price_unit === 'per_sqm') {
+      measure = (width / 100) * (height / 100) * qty;
+    } else if (line.product.price_unit === 'per_meter') {
+      measure = (width / 100) * qty;
+    } else if (line.product.price_unit === 'per_sqm_min1m') {
+      // "RUMUS BLINDS" - mirrors pricing.compute_measure: both sides
+      // floored at 1m/100cm before multiplying, even if the real
+      // measurement is smaller.
+      const widthM = Math.max(width, 100) / 100;
+      const heightM = Math.max(height, 100) / 100;
+      measure = widthM * heightM * qty;
+    } else if (line.product.price_unit === 'per_curtain_panel') {
+      // "RUMUS GORDEN" - mirrors pricing.compute_measure exactly, including
+      // the half-metre rounding, so this live preview matches what the
+      // server actually saves rather than just being a rough estimate.
+      let panels = Math.ceil(width / 60);
+      const fabricWidth = Number(line.product.fabric_width_cm) || 0;
+      if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
+      const heightM = height / 100;
+      const rawMetres = (heightM + 0.3) * panels + 0.4;
+      measure = Math.ceil(rawMetres / 0.5) * 0.5 * qty;
+    } else {
+      measure = qty;
+    }
 
     const discText = line.refs.disc.value.trim();
     const pct = discText === '' ? headerDiscount : num(discText);
@@ -113,21 +151,16 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     line.product = product;
     line.refs.prodInput.value = product.name;
 
-    const ranges = [];
-    if (product.min_width_cm || product.max_width_cm) {
-      ranges.push(`W ${fmtNum(product.min_width_cm || 0)}-${fmtNum(product.max_width_cm || '∞')}`);
-    }
-    if (product.min_height_cm || product.max_height_cm) {
-      ranges.push(`H ${fmtNum(product.min_height_cm || 0)}-${fmtNum(product.max_height_cm || '∞')}`);
-    }
-    line.refs.prodCode.textContent =
-      `${product.code} · ${product.price_unit}` + (ranges.length ? ` · ${ranges.join(' ')} cm` : '');
+    // Just the product name in the field itself now - no code/price-unit/
+    // size-range hint cluttering the row. Dimension LIMITS are still
+    // enforced (see markDimensions below); this only removes the extra
+    // text that used to display alongside the name.
+    line.refs.prodCode.textContent = '';
 
     if (resetPrice) line.refs.price.value = Number(product.unit_price);
     renderComponents(line, product);
 
-    const needsWidth = product.price_unit === 'per_sqm' || product.price_unit === 'per_meter';
-    const needsHeight = product.price_unit === 'per_sqm';
+    const { width: needsWidth, height: needsHeight } = dimensionsNeeded(product.price_unit);
     line.refs.width.disabled = !needsWidth || readonly;
     line.refs.height.disabled = !needsHeight || readonly;
     if (!needsWidth) line.refs.width.value = '';
@@ -242,9 +275,9 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     line.refs.remove.disabled = flag;
     (line.componentSelects || []).forEach((sel) => (sel.disabled = flag));
     if (!flag && line.product) {
-      const unit = line.product.price_unit;
-      line.refs.width.disabled = !(unit === 'per_sqm' || unit === 'per_meter');
-      line.refs.height.disabled = unit !== 'per_sqm';
+      const { width: needsWidth, height: needsHeight } = dimensionsNeeded(line.product.price_unit);
+      line.refs.width.disabled = !needsWidth;
+      line.refs.height.disabled = !needsHeight;
     }
   }
 
@@ -282,9 +315,10 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       resultsEl: line.refs.prodResults,
       search: (term) => api.listProducts(term),
       render: (p) =>
-        `${esc(p.name)}<span class="code">${esc(p.code)} · ${esc(p.price_unit)} · ${fmtMoney(
-          p.unit_price
-        )}</span>`,
+        // Just the name and price - code/price_unit were internal jargon
+        // that cluttered the list without helping pick the right fabric;
+        // price is kept since it's actually useful when choosing.
+        `${esc(p.name)}<span class="code">${fmtMoney(p.unit_price)}</span>`,
       onPick: (p) => selectProduct(line, p, { resetPrice: true }),
       floating: true,
     });
