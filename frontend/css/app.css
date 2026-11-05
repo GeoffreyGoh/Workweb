@@ -277,6 +277,19 @@ table.data .right, table.data th.right { text-align: right; }
 table.data .center, table.data th.center { text-align: center; }
 table.data .mono { font-variant-numeric: tabular-nums; }
 
+/* Category section header row in the Product Catalogue - a visibly
+   distinct divider, not just another data row, so the grouping actually
+   reads as sections while scanning the list. */
+table.data tr.category-row td {
+  background: var(--sky-soft);
+  font-weight: 700;
+  color: var(--navy-800);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+table.data tr.category-row:hover td { background: var(--sky-soft); }
+
 table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
 
 .table-wrap { overflow-x: auto; }

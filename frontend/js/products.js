@@ -44,7 +44,7 @@ function priceUnitLabel(unit) {
 /* ------------------------------------------------------------------ list */
 
 async function load() {
-  rowsEl.innerHTML = '<tr><td colspan="8" class="empty">Loading...</td></tr>';
+  rowsEl.innerHTML = '<tr><td colspan="7" class="empty">Loading...</td></tr>';
   try {
     const list = await api.listAllProducts({
       q: filters.q,
@@ -53,7 +53,7 @@ async function load() {
     });
 
     if (!list.length) {
-      rowsEl.innerHTML = `<tr><td colspan="8" class="empty">${esc(
+      rowsEl.innerHTML = `<tr><td colspan="7" class="empty">${esc(
         filters.q ? t('common.none') : t('product.none')
       )}</td></tr>`;
       document.getElementById('countNote').textContent = '';
@@ -67,32 +67,61 @@ async function load() {
         ? `${list.length}+ - narrow the list with search`
         : `${list.length} product(s)`;
 
-    rowsEl.innerHTML = list
-      .map(
-        (p) => `
-        <tr>
-          <td class="mono"><strong>${esc(p.code)}</strong></td>
-          <td>${esc(p.name)}</td>
-          <td>${esc(p.category || '-')}</td>
-          <td class="hint">${esc(priceUnitLabel(p.price_unit))}</td>
-          <td class="right mono">${fmtMoney(p.unit_price)}</td>
-          <td>${esc(p.supplier_name || '-')}</td>
-          <td>${
-            p.is_active
-              ? `<span class="status status-approved">${esc(t('product.active'))}</span>`
-              : `<span class="status status-cancelled">${esc(t('product.retired'))}</span>`
-          }</td>
-          <td class="right">
-            <button class="btn small" data-edit="${p.id}" type="button">${esc(
-              t('common.edit')
-            )}</button>
-          </td>
-        </tr>`
-      )
+    // Group by category so the catalogue reads as sections (Roller,
+    // Curtain, ...) instead of one long alphabetical-by-name table -
+    // easier to scan when picking a product's category also tells you
+    // roughly what it is. A blank/missing category becomes its own
+    // "Uncategorised" group rather than being silently dropped.
+    const groups = new Map();
+    list.forEach((p) => {
+      const key = p.category || 'Uncategorised';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(p);
+    });
+
+    // Category order: alphabetical, with "Uncategorised" always last so a
+    // data-entry gap doesn't visually jump to the top of the page.
+    const categoryNames = Array.from(groups.keys()).sort((a, b) => {
+      if (a === 'Uncategorised') return 1;
+      if (b === 'Uncategorised') return -1;
+      return a.localeCompare(b);
+    });
+
+    rowsEl.innerHTML = categoryNames
+      .map((category) => {
+        const rows = groups
+          .get(category)
+          .map(
+            (p) => `
+            <tr>
+              <td class="mono"><strong>${esc(p.code)}</strong></td>
+              <td>${esc(p.name)}</td>
+              <td class="right mono">${fmtMoney(p.unit_price)}</td>
+              <td class="hint">${esc(priceUnitLabel(p.price_unit))}</td>
+              <td>${esc(p.supplier_name || '-')}</td>
+              <td>${
+                p.is_active
+                  ? `<span class="status status-approved">${esc(t('product.active'))}</span>`
+                  : `<span class="status status-cancelled">${esc(t('product.retired'))}</span>`
+              }</td>
+              <td class="right">
+                <button class="btn small" data-edit="${p.id}" type="button">${esc(
+                  t('common.edit')
+                )}</button>
+              </td>
+            </tr>`
+          )
+          .join('');
+        return `
+          <tr class="category-row">
+            <td colspan="7">${esc(category)} <span class="hint">(${groups.get(category).length})</span></td>
+          </tr>
+          ${rows}`;
+      })
       .join('');
   } catch (err) {
     rowsEl.innerHTML =
-      '<tr><td colspan="8" class="empty">Could not load the catalogue.</td></tr>';
+      '<tr><td colspan="7" class="empty">Could not load the catalogue.</td></tr>';
     showError(err.message);
   }
 }
