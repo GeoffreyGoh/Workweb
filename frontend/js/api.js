@@ -453,7 +453,14 @@ function attachAutocomplete({
     window.addEventListener('resize', close);
   }
 
-  const run = debounce(async () => {
+  /**
+   * Fetch results for the current input value and redraw.
+   *
+   * Shared by the debounced typing handler and the immediate click/focus
+   * handler below - factored out so the click path can skip the debounce
+   * delay entirely rather than just using a shorter one.
+   */
+  const fetchAndDraw = async () => {
     const term = input.value.trim();
     if (term.length < minChars) return close();
     try {
@@ -463,14 +470,29 @@ function attachAutocomplete({
     } catch (e) {
       close();
     }
-  }, 220);
+  };
+
+  const run = debounce(fetchAndDraw, 220);
 
   input.addEventListener('input', run);
   input.addEventListener('focus', () => {
     // Only re-search when the list is actually closed. Re-running on every
     // focus would redraw the rows and throw away the user's scroll position
     // the moment focus returns after dragging the scrollbar.
-    if (resultsEl.classList.contains('hidden')) run();
+    if (!resultsEl.classList.contains('hidden')) return;
+
+    // Opening on click/focus should feel instant - the 220ms debounce above
+    // exists to stop a fetch firing on every keystroke while typing fast,
+    // but there is nothing to debounce here (one event, not a burst), and
+    // waiting out that delay with a blank dropdown is what made clicking
+    // into an empty field look broken (as if nothing happens until you
+    // start typing). Show a "Loading..." row immediately so there is always
+    // visible feedback the instant the field is clicked, then replace it
+    // with real results (or "No matches") the moment the fetch resolves.
+    resultsEl.innerHTML = '<div class="empty">Loading…</div>';
+    if (floating) position();
+    resultsEl.classList.remove('hidden');
+    fetchAndDraw();
   });
 
   input.addEventListener('keydown', (event) => {
