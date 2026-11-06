@@ -99,6 +99,7 @@ const api = {
   // Admin only - a normal user's call comes back 403.
   createProduct: (body) => apiFetch('/products', { method: 'POST', body }),
   updateProduct: (id, body) => apiFetch(`/products/${id}`, { method: 'PUT', body }),
+  deleteProduct: (id) => apiFetch(`/products/${id}`, { method: 'DELETE' }),
 
   listQuotations: (params) => {
     const qs = new URLSearchParams();

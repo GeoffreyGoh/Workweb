@@ -171,6 +171,10 @@ function openEditor(product) {
 
   editorEl.classList.remove('hidden');
   (product ? document.getElementById('fName') : codeInput).focus();
+
+  // Delete only makes sense for a product that already exists - a brand
+  // new, unsaved one has nothing to delete yet.
+  document.getElementById('deleteBtn').style.display = product ? '' : 'none';
 }
 
 function closeEditor() {
@@ -276,6 +280,30 @@ formEl.addEventListener('submit', async (event) => {
 
 document.getElementById('cancelBtn').addEventListener('click', closeEditor);
 document.getElementById('addBtn').addEventListener('click', () => openEditor(null));
+
+document.getElementById('deleteBtn').addEventListener('click', async () => {
+  const id = editorEl.dataset.id;
+  if (!id) return;
+  const name = document.getElementById('fName').value;
+
+  // A real confirm() dialog, not a one-click action - this is a hard,
+  // irreversible delete (unlike "Active = false", which just hides it),
+  // so the extra click is deliberate friction against a misclick.
+  if (!confirm(`Permanently delete "${name}"? This cannot be undone.`)) return;
+
+  try {
+    await api.deleteProduct(id);
+    closeEditor();
+    showSuccess(t('product.deleted'));
+    load();
+  } catch (err) {
+    // The 409 case (already used on a document) comes back with a
+    // specific, readable server message - show it as-is rather than a
+    // generic failure, since it tells the admin exactly what to do
+    // instead (retire it, don't delete it).
+    showError(err.message);
+  }
+});
 
 rowsEl.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-edit]');

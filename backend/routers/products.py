@@ -151,3 +151,49 @@ def product_options(
         for option in product.options
         if include_unavailable or option.is_available
     ]
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_role("admin")),
+):
+    """Permanently remove a product. Admin only.
+
+    Only allowed when the product has never been used on a real document -
+    a quotation, invoice, or purchase order line references it by
+    product_id, and none of those tables cascade-delete when a product
+    goes away. Refusing here is the only way to guarantee a hard delete
+    never breaks or silently orphans a historical document; retiring it
+    (is_active=false, already on the edit form) is the right move for
+    anything that has actually been quoted or ordered.
+    """
+    product = db.get(models.Product, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    in_use = (
+        db.query(models.QuotationItem.id)
+        .filter(models.QuotationItem.product_id == product_id)
+        .first()
+        or db.query(models.SalesOrderItem.id)
+        .filter(models.SalesOrderItem.product_id == product_id)
+        .first()
+        or db.query(models.PurchaseOrderItem.id)
+        .filter(models.PurchaseOrderItem.product_id == product_id)
+        .first()
+    )
+    if in_use:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"'{product.name}' has already been used on a quotation, invoice, "
+                "or purchase order and cannot be deleted. Set it to inactive "
+                "instead - it will disappear from pickers but existing documents "
+                "keep their history."
+            ),
+        )
+
+    db.delete(product)
+    db.commit()
