@@ -290,6 +290,14 @@ table.data tr.category-row td {
 }
 table.data tr.category-row:hover td { background: var(--sky-soft); }
 
+/* Sparepart sub-line in the quotation/invoice line editor - a visually
+   subordinate row under its product line, not a separate pick of its
+   own. Muted + indented product cell is enough to read as "part of the
+   line above" without needing a visual connector. */
+table.data tr.sparepart-row { background: #fafafa; }
+table.data tr.sparepart-row td { font-size: 12px; }
+table.data tr.sparepart-row .prodInput { color: var(--text-dim); font-style: italic; }
+
 table.data td input, table.data td select { padding: 5px 7px; font-size: 13px; }
 
 .table-wrap { overflow-x: auto; }

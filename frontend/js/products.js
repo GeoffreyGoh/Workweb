@@ -161,6 +161,7 @@ function openEditor(product) {
   set('fDescription', product ? product.description : '');
   document.getElementById('fActive').checked = product ? product.is_active : true;
   fillSupplierOptions(product ? product.supplier_id : null);
+  renderSpareparts(product ? product.spareparts : []);
 
   // Quotations and invoices store the code as a snapshot, but purchase-order
   // splitting and the catalogue import both match on it, so it stays put.
@@ -176,6 +177,51 @@ function closeEditor() {
   editorEl.classList.add('hidden');
   editorEl.dataset.id = '';
 }
+
+/* ------------------------------------------------------------ spareparts */
+// Each row is plain HTML inputs, not a data structure - readSpareparts()
+// below reads the DOM directly when the form is submitted, matching how
+// the rest of this form already works (readForm() does the same for the
+// main fields).
+
+const sparepartRowsEl = document.getElementById('sparepartRows');
+
+function sparepartRowHtml(sp) {
+  const name = sp ? sp.name : '';
+  const price = sp ? sp.unit_price : 0;
+  const qty = sp ? sp.qty_per_unit : 1;
+  return `
+    <tr>
+      <td><input type="text" class="spName" maxlength="100" value="${esc(name)}" required></td>
+      <td><input type="number" class="spPrice num" min="0" step="0.01" value="${esc(price)}"></td>
+      <td><input type="number" class="spQty num" min="0.01" step="0.01" value="${esc(qty)}"></td>
+      <td class="right"><button class="btn small danger" type="button" data-remove-sparepart>&times;</button></td>
+    </tr>`;
+}
+
+function renderSpareparts(spareparts) {
+  sparepartRowsEl.innerHTML = (spareparts || []).map(sparepartRowHtml).join('');
+}
+
+function readSpareparts() {
+  return Array.from(sparepartRowsEl.querySelectorAll('tr')).map((row) => ({
+    name: row.querySelector('.spName').value.trim(),
+    unit_price: Number(row.querySelector('.spPrice').value || 0),
+    qty_per_unit: Number(row.querySelector('.spQty').value || 1),
+    is_optional: true, // the only kind this form creates - see the clarify log
+    is_active: true,
+  })).filter((sp) => sp.name); // drop a row left blank by mistake rather than reject the whole save
+}
+
+document.getElementById('addSparepartBtn').addEventListener('click', () => {
+  sparepartRowsEl.insertAdjacentHTML('beforeend', sparepartRowHtml(null));
+});
+
+sparepartRowsEl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-remove-sparepart]');
+  if (!button) return;
+  button.closest('tr').remove();
+});
 
 /** Blank numeric inputs mean "no limit", which the API wants as null. */
 function numOrNull(id) {
@@ -198,6 +244,7 @@ function readForm() {
     description: document.getElementById('fDescription').value.trim() || null,
     is_active: document.getElementById('fActive').checked,
     supplier_id: supplier ? Number(supplier) : null,
+    spareparts: readSpareparts(),
   };
 }
 

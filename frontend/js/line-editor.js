@@ -41,6 +41,13 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   const lines = [];
   let seq = 0;
   let readonly = false;
+  // Maps a saved line's server-assigned line_no -> the frontend row's uid,
+  // rebuilt as each row is added during a load. A sparepart row's saved
+  // parent_line_no is resolved through this map (see applySparepartData) -
+  // it only works because items always arrive in line_no order and a
+  // sparepart's parent always has a lower line_no, so the parent's row
+  // exists in this map before the sparepart row needs it.
+  let lineNoToUid = {};
 
   const num = (v) => {
     const n = parseFloat(v);
@@ -66,6 +73,17 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   }
 
   function computeLine(line, headerDiscount) {
+    if (line.isSparepart) {
+      // A sparepart has no dimensions and no catalogue product - billed
+      // flat as quantity x its own price, same discount rule as any line.
+      const qty = num(line.refs.qty.value);
+      const price = num(line.refs.price.value);
+      const discText = line.refs.disc.value.trim();
+      const pct = discText === '' ? headerDiscount : num(discText);
+      const lineTotal = round2(qty * price);
+      const discount = round2((lineTotal * pct) / 100);
+      return { measure: qty, lineTotal, discount, net: round2(lineTotal - discount), qty };
+    }
     if (!line.product) {
       return { measure: 0, lineTotal: 0, discount: 0, net: 0, qty: num(line.refs.qty.value) };
     }
@@ -128,6 +146,14 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     let discountTotal = 0;
     let totalQty = 0;
 
+    // line_no is just the row's 1-based position - matches the server's
+    // own numbering (see routers' _apply_items), which is what lets a
+    // sparepart's parent_line_no line up correctly once this is submitted.
+    lineNoToUid = {};
+    lines.forEach((line, i) => {
+      lineNoToUid[i + 1] = line.uid;
+    });
+
     lines.forEach((line, i) => {
       const calc = computeLine(line, headerDiscount);
       line.refs.lineNo.textContent = i + 1;
@@ -166,7 +192,68 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     if (!needsWidth) line.refs.width.value = '';
     if (!needsHeight) line.refs.height.value = '';
 
+    // Only auto-add sparepart sub-lines when the salesperson just picked
+    // this product fresh from the dropdown (resetPrice=true) - NOT when
+    // re-applying a saved line on load (resetPrice=false), where any
+    // sparepart sub-lines already exist as their own saved rows and would
+    // otherwise be duplicated.
+    if (resetPrice) syncSpareparts(line);
+
     recalc();
+  }
+
+  /**
+   * Auto-populate (or refresh) this line's sparepart sub-rows from its
+   * product's catalogue spareparts. Any sub-rows already under this line
+   * are removed first, so switching to a different product does not leave
+   * the old product's spareparts behind.
+   */
+  function syncSpareparts(line) {
+    removeChildSpareparts(line);
+    const spareparts = (line.product && line.product.spareparts) || [];
+    spareparts.forEach((sp) => addSparepartRow(line, sp));
+  }
+
+  function addSparepartRow(parentLine, sparepart) {
+    const qtyPerUnit = Number(sparepart.qty_per_unit) || 1;
+    const mainQty = num(parentLine.refs.qty.value);
+    return addRow(
+      {
+        is_sparepart: true,
+        product_name: sparepart.name,
+        unit_price: sparepart.unit_price,
+        quantity: round2(mainQty * qtyPerUnit),
+        description: null,
+        line_discount_pct: null,
+      },
+      { parentUid: parentLine.uid, qtyPerUnit }
+    );
+  }
+
+  /** Remove every sparepart row that auto-followed this product line. */
+  function removeChildSpareparts(parentLine) {
+    lines
+      .filter((l) => l.isSparepart && l.parentUid === parentLine.uid)
+      .forEach((l) => removeLineRow(l));
+  }
+
+  /**
+   * Keep sparepart quantities scaled to the main line's quantity (the
+   * "qty matters" rule - e.g. 2 brackets per blind). Re-applied every time
+   * the main line's qty changes, so a sparepart's own qty field always
+   * reflects qty_per_unit x the current main qty rather than going stale.
+   * A salesperson can still edit a sparepart's qty by hand, but it reverts
+   * to the formula the next time the main line's qty is touched - a
+   * deliberate simplicity trade-off flagged to Geoffrey, not a bug.
+   */
+  function syncSparepartQuantities(parentLine) {
+    if (parentLine.isSparepart) return;
+    const mainQty = num(parentLine.refs.qty.value);
+    lines
+      .filter((l) => l.isSparepart && l.parentUid === parentLine.uid && l.qtyPerUnit)
+      .forEach((l) => {
+        l.refs.qty.value = round2(mainQty * l.qtyPerUnit);
+      });
   }
 
   /**
@@ -233,6 +320,10 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   }
 
   function applyLineData(line, data) {
+    if (data.is_sparepart) {
+      applySparepartData(line, data);
+      return;
+    }
     // A saved line carries only a product snapshot, so show that at once...
     selectProduct(
       line,
@@ -268,20 +359,61 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       });
   }
 
+  /**
+   * Apply a sparepart sub-line's saved data. Unlike a normal line, there
+   * is no catalogue product to fetch - the name/price travel with the
+   * line itself (see schemas.QuotationItemOut.product_name/unit_price).
+   * parent_line_no (the saved line's position in the DOCUMENT) is
+   * resolved through lineNoToUid, built fresh in recalc() as each row is
+   * added in order - this only works because a sparepart's parent line
+   * always loads before it (lower line_no), which the server guarantees.
+   */
+  function applySparepartData(line, data) {
+    line.isSparepart = true;
+    line.tr.classList.add('sparepart-row');
+    line.refs.prodInput.value = `↳ ${data.product_name}`;
+    line.refs.prodInput.disabled = true; // not swappable - remove and let it regenerate instead
+    line.refs.width.disabled = true;
+    line.refs.height.disabled = true;
+    line.refs.width.value = '';
+    line.refs.height.value = '';
+
+    line.refs.desc.value = data.description || '';
+    line.refs.qty.value = Number(data.quantity);
+    line.refs.price.value = Number(data.unit_price);
+    line.refs.disc.value = data.line_discount_pct === null ? '' : Number(data.line_discount_pct);
+
+    // addRow already set line.parentUid from opts.parentUid when this row
+    // was created fresh via addSparepartRow (the live-editing path) - only
+    // resolve it from the saved data.parent_line_no when that wasn't the
+    // case (the load-from-server path, where opts is never passed).
+    if (line.parentUid === null && data.parent_line_no != null) {
+      line.parentUid = lineNoToUid[data.parent_line_no] || null;
+    }
+  }
+
   function setRowReadonly(line, flag) {
     ['prodInput', 'desc', 'qty', 'width', 'height', 'price', 'disc'].forEach((key) => {
       line.refs[key].disabled = flag;
     });
     line.refs.remove.disabled = flag;
     (line.componentSelects || []).forEach((sel) => (sel.disabled = flag));
-    if (!flag && line.product) {
+    if (!flag && line.isSparepart) {
+      // A sparepart's product field and dimensions are permanently
+      // read-only regardless of the row's overall readonly state - only
+      // name was ever free text, and it has no catalogue counterpart to
+      // swap in via the dropdown.
+      line.refs.prodInput.disabled = true;
+      line.refs.width.disabled = true;
+      line.refs.height.disabled = true;
+    } else if (!flag && line.product) {
       const { width: needsWidth, height: needsHeight } = dimensionsNeeded(line.product.price_unit);
       line.refs.width.disabled = !needsWidth;
       line.refs.height.disabled = !needsHeight;
     }
   }
 
-  function addRow(data) {
+  function addRow(data, opts) {
     const tr = document.createElement('tr');
     tr.innerHTML = LINE_ROW_HTML;
     tbody.appendChild(tr);
@@ -290,6 +422,9 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       uid: ++seq,
       tr,
       product: null,
+      isSparepart: false,
+      parentUid: opts && opts.parentUid ? opts.parentUid : null,
+      qtyPerUnit: opts && opts.qtyPerUnit ? opts.qtyPerUnit : null,
       refs: {
         lineNo: tr.querySelector('.lineNo'),
         prodInput: tr.querySelector('.prodInput'),
@@ -310,6 +445,19 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     };
     lines.push(line);
 
+    // A row created directly as a sparepart (addSparepartRow, not loaded
+    // from saved data) needs the same markup/behaviour applyLineData
+    // gives a loaded one - name prefix, read-only dimensions, no product
+    // autocomplete. data.is_sparepart (the saved-row path) is handled
+    // inside applyLineData below instead.
+    if (opts && opts.parentUid && !(data && data.is_sparepart)) {
+      line.isSparepart = true;
+      line.tr.classList.add('sparepart-row');
+      line.refs.prodInput.disabled = true;
+      line.refs.width.disabled = true;
+      line.refs.height.disabled = true;
+    }
+
     attachAutocomplete({
       input: line.refs.prodInput,
       resultsEl: line.refs.prodResults,
@@ -323,25 +471,41 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       floating: true,
     });
 
-    ['qty', 'width', 'height', 'price', 'disc'].forEach((key) =>
+    ['width', 'height', 'price', 'disc'].forEach((key) =>
       line.refs[key].addEventListener('input', recalc)
     );
+    // qty additionally has to re-scale any sparepart children that follow
+    // this line - a normal .addEventListener('input', recalc) would miss
+    // that, so qty gets its own handler instead of joining the loop above.
+    line.refs.qty.addEventListener('input', () => {
+      syncSparepartQuantities(line);
+      recalc();
+    });
 
     line.refs.remove.addEventListener('click', () => {
-      const i = lines.findIndex((l) => l.uid === line.uid);
-      if (i >= 0) lines.splice(i, 1);
-      tr.remove();
-      if (line.refs.prodResults.parentElement === document.body) {
-        line.refs.prodResults.remove(); // floating dropdowns live on <body>
-      }
+      removeLineRow(line, { removeChildren: true });
       recalc();
     });
 
     if (data) applyLineData(line, data);
+    if (!line.isSparepart) line.refs.prodInput.disabled = readonly;
     if (readonly) setRowReadonly(line, true);
 
     recalc();
     return line;
+  }
+
+  /** Detach one row's DOM and bookkeeping without triggering a recalc -
+   * callers (the remove button, removeChildSpareparts) call recalc()
+   * themselves once, after any cascaded removals are done. */
+  function removeLineRow(line, { removeChildren = false } = {}) {
+    if (removeChildren) removeChildSpareparts(line);
+    const i = lines.findIndex((l) => l.uid === line.uid);
+    if (i >= 0) lines.splice(i, 1);
+    line.tr.remove();
+    if (line.refs.prodResults.parentElement === document.body) {
+      line.refs.prodResults.remove(); // floating dropdowns live on <body>
+    }
   }
 
   function clear() {
@@ -361,20 +525,46 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   /** Payload items. Throws with a readable message if a row is incomplete. */
   function getItems() {
     if (!lines.length) throw new Error('Add at least one line item.');
-    return lines.map((line, i) => {
-      if (!line.product) throw new Error(`Line ${i + 1}: pick a product.`);
-      return {
-        product_id: line.product.id,
-        description: line.refs.desc.value.trim() || null,
-        quantity: num(line.refs.qty.value),
-        width_cm: line.refs.width.value === '' ? null : num(line.refs.width.value),
-        height_cm: line.refs.height.value === '' ? null : num(line.refs.height.value),
-        unit_price: line.refs.price.value === '' ? null : num(line.refs.price.value),
-        line_discount_pct:
-          line.refs.disc.value.trim() === '' ? null : num(line.refs.disc.value),
-        component_options: readComponents(line),
-      };
+
+    // Submission order is the line_no the server will assign (see
+    // routers' _apply_items), so a sparepart's parent_line_no has to be
+    // the 1-based INDEX of its parent within THIS array, not the parent's
+    // frontend uid.
+    const uidToSubmissionNo = {};
+    lines.forEach((line, i) => {
+      if (!line.isSparepart) uidToSubmissionNo[line.uid] = i + 1;
     });
+
+    return lines
+      .map((line, i) => {
+        if (line.isSparepart) {
+          const parentNo = line.parentUid ? uidToSubmissionNo[line.parentUid] : null;
+          if (!parentNo) return null; // parent was removed - drop this orphan silently
+          return {
+            is_sparepart: true,
+            sparepart_name: line.refs.prodInput.value.replace(/^↳\s*/, '').trim(),
+            parent_line_no: parentNo,
+            description: line.refs.desc.value.trim() || null,
+            quantity: num(line.refs.qty.value),
+            unit_price: line.refs.price.value === '' ? null : num(line.refs.price.value),
+            line_discount_pct:
+              line.refs.disc.value.trim() === '' ? null : num(line.refs.disc.value),
+          };
+        }
+        if (!line.product) throw new Error(`Line ${i + 1}: pick a product.`);
+        return {
+          product_id: line.product.id,
+          description: line.refs.desc.value.trim() || null,
+          quantity: num(line.refs.qty.value),
+          width_cm: line.refs.width.value === '' ? null : num(line.refs.width.value),
+          height_cm: line.refs.height.value === '' ? null : num(line.refs.height.value),
+          unit_price: line.refs.price.value === '' ? null : num(line.refs.price.value),
+          line_discount_pct:
+            line.refs.disc.value.trim() === '' ? null : num(line.refs.disc.value),
+          component_options: readComponents(line),
+        };
+      })
+      .filter((item) => item !== null);
   }
 
   if (addBtn) {

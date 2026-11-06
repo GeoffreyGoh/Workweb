@@ -105,6 +105,26 @@
               <input type="checkbox" id="fActive" style="width:auto" checked>
             </div>
 
+            <!-- Optional accessories this product may need (bracket, motor
+                 kit, end cap...). Not shared across products - each row
+                 belongs only to this product, same as Options/Colors. -->
+            <div class="field col-4">
+              <label data-i18n="product.spareparts">Spareparts (optional accessories)</label>
+              <table class="data" id="sparepartTable" style="margin-bottom:8px">
+                <thead>
+                  <tr>
+                    <th data-i18n="product.sparepartName">Name</th>
+                    <th class="right" style="width:160px" data-i18n="product.unitPrice">Unit Price</th>
+                    <th class="right" style="width:140px" data-i18n="product.sparepartQtyPerUnit">Qty per unit</th>
+                    <th style="width:90px"></th>
+                  </tr>
+                </thead>
+                <tbody id="sparepartRows"></tbody>
+              </table>
+              <button class="btn small" id="addSparepartBtn" type="button"
+                      data-i18n="product.addSparepart">+ Add sparepart</button>
+            </div>
+
             <div class="field col-4" style="flex-direction:row; gap:8px">
               <button class="btn primary" type="submit" id="saveBtn"
                       data-i18n="common.save">Save</button>
