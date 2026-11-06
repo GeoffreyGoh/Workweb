@@ -284,6 +284,25 @@
       </div>
     </div>
 
+    <!-- Accounts receivable: mark this invoice's balance settled/written off,
+         independent of recording an actual payment above. Hidden for draft/
+         cancelled invoices via updateReceivable() in sales-order-form.js. -->
+    <div class="card" id="receivableCard" style="display:none">
+      <header>
+        <span data-i18n="ar.filter">Receivable</span>
+        <div class="spacer"></div>
+        <span id="receivableState" class="hint"></span>
+      </header>
+      <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end">
+        <div class="field" style="flex:1; min-width:220px">
+          <label for="closeNote" data-i18n="ar.closeNote">Closing note</label>
+          <input type="text" id="closeNote" placeholder="Optional">
+        </div>
+        <button class="btn primary" id="closeArBtn" type="button" data-i18n="ar.close">Close Receivable</button>
+        <button class="btn" id="reopenArBtn" type="button" data-i18n="ar.reopen" style="display:none">Reopen Receivable</button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
         <button class="btn primary" id="saveBtn" type="button" data-i18n="common.save" style="display:none">Save</button>
