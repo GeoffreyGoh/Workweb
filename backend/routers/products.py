@@ -24,6 +24,14 @@ def _to_out(product: models.Product) -> schemas.ProductOut:
         for o in product.options
         if o.is_available
     ]
+    # Retired spareparts stay in the database (so old quotations that
+    # already reference them keep their price history) but are hidden
+    # from the picker, same as is_active elsewhere in this app.
+    out.spareparts = [
+        schemas.ProductSparepartOut.model_validate(s)
+        for s in product.spareparts
+        if s.is_active
+    ]
     return out
 
 
@@ -78,7 +86,14 @@ def create_product(
     if exists:
         raise HTTPException(status_code=409, detail=f"Product code '{payload.code}' already exists")
 
-    product = models.Product(**payload.model_dump())
+    # spareparts is a nested list, not a plain column - build it into
+    # relationship objects rather than passing it straight to the model
+    # constructor (which only accepts column kwargs).
+    data = payload.model_dump(exclude={"spareparts"})
+    product = models.Product(**data)
+    product.spareparts = [
+        models.ProductSparepart(**sp.model_dump()) for sp in payload.spareparts
+    ]
     db.add(product)
     db.commit()
     db.refresh(product)
@@ -97,8 +112,18 @@ def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True, exclude={"spareparts"})
+    for field, value in updates.items():
         setattr(product, field, value)
+
+    # spareparts omitted entirely (None) means "leave as-is"; an explicit
+    # list - even an empty one - replaces the whole set. Replacing rather
+    # than diffing matches how the admin screen always resends the full
+    # list on every save (same as options/colors import does).
+    if payload.spareparts is not None:
+        product.spareparts = [
+            models.ProductSparepart(**sp.model_dump()) for sp in payload.spareparts
+        ]
 
     db.commit()
     db.refresh(product)

@@ -200,6 +200,60 @@ def price_line(product, item, header_discount_pct: Decimal, line_no: int) -> dic
         "line_total": line_total,
         "line_discount_amt": line_discount_amt,
         "line_net": line_net,
+        "is_sparepart": False,
+        "parent_line_no": None,
+    }
+
+
+def price_sparepart_line(item, header_discount_pct: Decimal, line_no: int) -> dict:
+    """Price a sparepart sub-line.
+
+    No product master, no dimensions, no mechanism lookup - a sparepart is
+    billed as quantity x its own flat unit_price, same discount rule as a
+    normal line. parent_line_no must point at a product line that was
+    already assigned a line_no earlier in the same submission (the caller
+    enforces the ordering - see _apply_items).
+    """
+    quantity = Decimal(str(item.quantity))
+    if quantity <= 0:
+        raise PricingError(f"Line {line_no}: quantity must be greater than 0")
+    if not item.sparepart_name:
+        raise PricingError(f"Line {line_no}: a sparepart line needs a name")
+    if item.parent_line_no is None:
+        raise PricingError(f"Line {line_no}: a sparepart line needs parent_line_no")
+
+    unit_price = money(item.unit_price) if item.unit_price is not None else money(0)
+
+    effective_pct = (
+        Decimal(str(item.line_discount_pct))
+        if item.line_discount_pct is not None
+        else Decimal(str(header_discount_pct))
+    )
+    if effective_pct < 0 or effective_pct > 100:
+        raise PricingError(f"Line {line_no}: discount must be between 0 and 100")
+
+    line_total = money(quantity * unit_price)
+    line_discount_amt = money(line_total * effective_pct / 100)
+    line_net = money(line_total - line_discount_amt)
+
+    return {
+        "line_no": line_no,
+        "product_id": None,
+        "product_code": "SPAREPART",
+        "product_name": item.sparepart_name,
+        "price_unit": "per_unit",
+        "description": item.description,
+        "quantity": quantity,
+        "width_cm": None,
+        "height_cm": None,
+        "measure": quantity,
+        "unit_price": unit_price,
+        "line_discount_pct": item.line_discount_pct,
+        "line_total": line_total,
+        "line_discount_amt": line_discount_amt,
+        "line_net": line_net,
+        "is_sparepart": True,
+        "parent_line_no": item.parent_line_no,
     }
 
 

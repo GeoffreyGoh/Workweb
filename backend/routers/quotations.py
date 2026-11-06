@@ -71,13 +71,32 @@ def _load_products(db: Session, items) -> dict:
 
 def _apply_items(db: Session, quotation: models.Quotation, items) -> None:
     """Replace the quotation's lines, repricing everything from scratch."""
-    products = _load_products(db, items)
+    normal_items = [item for item in items if not item.is_sparepart]
+    products = _load_products(db, normal_items)
+
+    # line_no is assigned 1..N in submission order, same as before - a
+    # sparepart's parent_line_no must point at one of those numbers, and
+    # specifically at a normal line, not another sparepart (no nesting).
+    normal_line_nos = {
+        i for i, item in enumerate(items, start=1) if not item.is_sparepart
+    }
 
     try:
-        priced = [
-            pricing.price_line(products[item.product_id], item, quotation.discount_percent, i)
-            for i, item in enumerate(items, start=1)
-        ]
+        priced = []
+        for i, item in enumerate(items, start=1):
+            if item.is_sparepart:
+                if item.parent_line_no not in normal_line_nos:
+                    raise pricing.PricingError(
+                        f"Line {i}: parent_line_no {item.parent_line_no} is not "
+                        "a product line in this submission"
+                    )
+                priced.append(
+                    pricing.price_sparepart_line(item, quotation.discount_percent, i)
+                )
+            else:
+                priced.append(
+                    pricing.price_line(products[item.product_id], item, quotation.discount_percent, i)
+                )
     except pricing.PricingError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -260,6 +279,9 @@ def update_quotation(
             unit_price=line.unit_price,
             line_discount_pct=line.line_discount_pct,
             component_options=line.component_options,
+            is_sparepart=line.is_sparepart,
+            parent_line_no=line.parent_line_no,
+            sparepart_name=line.product_name if line.is_sparepart else None,
         )
         for line in quotation.items
     ]

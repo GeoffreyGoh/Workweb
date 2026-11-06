@@ -175,6 +175,13 @@ class Product(Base):
         order_by="ProductColor.color_name",
         lazy="selectin",
     )
+    spareparts = relationship(
+        "ProductSparepart",
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductSparepart.name",
+        lazy="selectin",
+    )
 
 
 class Quotation(Base):
@@ -248,7 +255,11 @@ class QuotationItem(Base):
         index=True,
     )
     line_no = Column(Integer, nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    # Nullable because a sparepart sub-line has no catalogue Product of its
+    # own - it is a plain accessory snapshot (name/price) off the parent
+    # line's ProductSparepart, not something the admin can pick from the
+    # product list.
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
 
     product_code = Column(String(40), nullable=False)
     product_name = Column(String(150), nullable=False)
@@ -267,6 +278,17 @@ class QuotationItem(Base):
     line_total = Column(Money(), nullable=False, default=Decimal("0.00"))
     line_discount_amt = Column(Money(), nullable=False, default=Decimal("0.00"))
     line_net = Column(Money(), nullable=False, default=Decimal("0.00"))
+
+    # Sparepart sub-lines point back at their main product line's line_no
+    # within the same document (not a strict FK - line_no is only unique
+    # per-document, and both lines are created together in one request
+    # before either has a real id to reference). NULL on a normal line.
+    parent_line_no = Column(Integer, nullable=True)
+    # True only for an auto-added accessory sub-line (from
+    # Product.spareparts), never for a line the salesperson picked from
+    # the catalogue directly - lets the UI/PDF tell the two apart at a
+    # glance without inferring it from parent_line_no being set.
+    is_sparepart = Column(Boolean, nullable=False, default=False)
 
     quotation = relationship("Quotation", back_populates="items")
 
@@ -335,6 +357,39 @@ class ProductColor(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     product = relationship("Product", back_populates="colors")
+
+
+class ProductSparepart(Base):
+    """An optional accessory a product may need (bracket, end cap, motor...).
+
+    Private to one product - like ProductOption/ProductColor, there is no
+    shared master list to reuse across products. If the same accessory is
+    genuinely used by several products, it gets entered once per product;
+    that duplication is intentional simplicity over premature normalisation.
+
+    qty_per_unit scales with the main line's quantity on a quotation/invoice
+    (e.g. 2 brackets per roller blind): line_editor.js multiplies this by the
+    main product's quantity to seed the sparepart's own sub-line quantity,
+    which the salesperson can still edit or remove since it is optional,
+    not a forced add-on.
+    """
+
+    __tablename__ = "product_spareparts"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(
+        Integer,
+        ForeignKey("products.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name = Column(String(100), nullable=False)
+    unit_price = Column(Money(), nullable=False, default=Decimal("0.00"))
+    qty_per_unit = Column(Qty(), nullable=False, default=Decimal("1.00"))
+    is_optional = Column(Boolean, nullable=False, default=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
+    product = relationship("Product", back_populates="spareparts")
 
 
 class Supplier(Base):
@@ -439,7 +494,9 @@ class SalesOrderItem(Base):
         index=True,
     )
     line_no = Column(Integer, nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    # Nullable for the same reason as QuotationItem - a sparepart sub-line
+    # has no catalogue Product of its own.
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
 
     product_code = Column(String(40), nullable=False)
     product_name = Column(String(150), nullable=False)
@@ -457,6 +514,10 @@ class SalesOrderItem(Base):
     line_total = Column(Money(), nullable=False, default=Decimal("0.00"))
     line_discount_amt = Column(Money(), nullable=False, default=Decimal("0.00"))
     line_net = Column(Money(), nullable=False, default=Decimal("0.00"))
+
+    # See QuotationItem for why these two are not a strict FK.
+    parent_line_no = Column(Integer, nullable=True)
+    is_sparepart = Column(Boolean, nullable=False, default=False)
 
     sales_order = relationship("SalesOrder", back_populates="items")
 

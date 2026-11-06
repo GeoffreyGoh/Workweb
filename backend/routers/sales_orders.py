@@ -65,7 +65,8 @@ def _to_out(db: Session, so: models.SalesOrder, user) -> schemas.SalesOrderOut:
 
 
 def _apply_items(db: Session, so: models.SalesOrder, items) -> None:
-    ids = {item.product_id for item in items}
+    normal_items = [item for item in items if not item.is_sparepart]
+    ids = {item.product_id for item in normal_items}
     products = {}
     if ids:
         rows = db.query(models.Product).filter(models.Product.id.in_(ids)).all()
@@ -77,11 +78,24 @@ def _apply_items(db: Session, so: models.SalesOrder, items) -> None:
                 detail=f"Unknown product_id(s): {', '.join(str(i) for i in sorted(missing))}",
             )
 
+    normal_line_nos = {
+        i for i, item in enumerate(items, start=1) if not item.is_sparepart
+    }
+
     try:
-        priced = [
-            pricing.price_line(products[item.product_id], item, so.discount_percent, i)
-            for i, item in enumerate(items, start=1)
-        ]
+        priced = []
+        for i, item in enumerate(items, start=1):
+            if item.is_sparepart:
+                if item.parent_line_no not in normal_line_nos:
+                    raise pricing.PricingError(
+                        f"Line {i}: parent_line_no {item.parent_line_no} is not "
+                        "a product line in this submission"
+                    )
+                priced.append(pricing.price_sparepart_line(item, so.discount_percent, i))
+            else:
+                priced.append(
+                    pricing.price_line(products[item.product_id], item, so.discount_percent, i)
+                )
     except pricing.PricingError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
@@ -302,6 +316,8 @@ def convert_quotation(
                 line_total=line.line_total,
                 line_discount_amt=line.line_discount_amt,
                 line_net=line.line_net,
+                is_sparepart=line.is_sparepart,
+                parent_line_no=line.parent_line_no,
             )
         )
     for field in (
@@ -358,6 +374,9 @@ def update_sales_order(
             unit_price=line.unit_price,
             line_discount_pct=line.line_discount_pct,
             component_options=line.component_options,
+            is_sparepart=line.is_sparepart,
+            parent_line_no=line.parent_line_no,
+            sparepart_name=line.product_name if line.is_sparepart else None,
         )
         for line in so.items
     ]

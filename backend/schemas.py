@@ -108,8 +108,32 @@ class ProductBase(BaseModel):
     supplier_id: Optional[int] = None
 
 
+class ProductSparepartIn(BaseModel):
+    """One accessory row sent by the admin when creating/editing a product.
+
+    No id required - the admin screen replaces the whole sparepart list on
+    every save (same pattern options/colors would use if they were
+    editable here), so there is nothing to match up by id.
+    """
+
+    name: str = Field(min_length=1, max_length=100)
+    unit_price: Decimal = Field(default=Decimal("0.00"), ge=0)
+    qty_per_unit: Decimal = Field(default=Decimal("1.00"), gt=0)
+    is_optional: bool = True
+    is_active: bool = True
+
+
+class ProductSparepartOut(ORMModel):
+    id: int
+    name: str
+    unit_price: Decimal
+    qty_per_unit: Decimal
+    is_optional: bool
+    is_active: bool
+
+
 class ProductCreate(ProductBase):
-    pass
+    spareparts: List[ProductSparepartIn] = Field(default_factory=list)
 
 
 class ProductUpdate(BaseModel):
@@ -125,6 +149,8 @@ class ProductUpdate(BaseModel):
     fabric_width_cm: Optional[Decimal] = Field(default=None, ge=0)
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    # None means "leave as-is"; an empty list means "clear every sparepart".
+    spareparts: Optional[List[ProductSparepartIn]] = None
 
 
 class ProductOptionOut(ORMModel):
@@ -139,6 +165,8 @@ class ProductOut(ORMModel, ProductBase):
     supplier_name: Optional[str] = None
     # Mechanisms/rails this fabric can be made in (FABRIC CHART).
     options: List[ProductOptionOut] = Field(default_factory=list)
+    # Optional accessories this product may need (brackets, motors...).
+    spareparts: List[ProductSparepartOut] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------- customers
@@ -182,7 +210,9 @@ class QuotationItemIn(BaseModel):
     """A submitted line. Money fields other than unit_price are ignored -
     the server recalculates them."""
 
-    product_id: int
+    # None only for a sparepart sub-line (see is_sparepart below) - a
+    # sparepart has no catalogue Product to look up.
+    product_id: Optional[int] = None
     description: Optional[str] = None
     quantity: Decimal = Field(default=Decimal("1"), gt=0)
     width_cm: Optional[Decimal] = Field(default=None, ge=0)
@@ -192,12 +222,26 @@ class QuotationItemIn(BaseModel):
     # Chosen mechanism/rail, e.g. "Roller: Standard Roll | Bottom Rail: Flat".
     component_options: Optional[str] = Field(default=None, max_length=255)
 
+    # --- sparepart sub-line fields ---
+    # True for an auto-added accessory line (from Product.spareparts),
+    # never set by the salesperson picking from the catalogue directly.
+    is_sparepart: bool = False
+    # The 1-based position, within THIS submission's items list, of the
+    # product line this sparepart belongs under. The server assigns
+    # line_no in that same 1..N order, so this lines up with the real
+    # line_no once saved - see _apply_items in the router.
+    parent_line_no: Optional[int] = None
+    # A sparepart has no product master, so its name and price travel
+    # with the line itself rather than being looked up server-side.
+    # Required when is_sparepart=True; ignored otherwise.
+    sparepart_name: Optional[str] = Field(default=None, max_length=150)
+
 
 class QuotationItemOut(ORMModel):
     component_options: Optional[str] = None
     id: int
     line_no: int
-    product_id: int
+    product_id: Optional[int] = None
     product_code: str
     product_name: str
     price_unit: str
@@ -211,6 +255,8 @@ class QuotationItemOut(ORMModel):
     line_total: Decimal
     line_discount_amt: Decimal
     line_net: Decimal
+    is_sparepart: bool = False
+    parent_line_no: Optional[int] = None
 
 
 class QuotationBase(BaseModel):
