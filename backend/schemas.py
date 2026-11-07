@@ -4,7 +4,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PriceUnit = Literal["per_sqm", "per_unit", "per_meter", "per_sqm_min1m", "per_curtain_panel"]
 Role = Literal["admin", "user"]
@@ -15,6 +15,12 @@ SalesOrderStatus = Literal[
 PurchaseOrderStatus = Literal["draft", "sent", "received", "cancelled"]
 DeliveryNoteStatus = Literal["draft", "issued", "delivered", "cancelled"]
 PaymentMethod = Literal["cash", "transfer", "cheque", "card", "other"]
+
+# What a sparepart's custom unit can be measured against on the
+# quotation/invoice line it rides on. 'measure' is the sqm/metre/piece
+# figure the main line is actually billed on (see pricing.compute_measure) -
+# distinct from width_cm/height_cm, which are the raw input dimensions.
+BASIS_CHOICES = ("quantity", "width_cm", "height_cm", "measure")
 
 
 class ORMModel(BaseModel):
@@ -118,9 +124,28 @@ class ProductSparepartIn(BaseModel):
 
     name: str = Field(min_length=1, max_length=100)
     unit_price: Decimal = Field(default=Decimal("0.00"), ge=0)
+    # Fallback rule, used only when neither custom unit below is set.
     qty_per_unit: Decimal = Field(default=Decimal("1.00"), gt=0)
+
+    # Up to 2 optional custom units - e.g. "per m width" multiplying the
+    # main line's width_cm. See models.ProductSparepart for the full
+    # explanation. basis must be one of BASIS_CHOICES if set at all.
+    custom_unit_1_label: Optional[str] = Field(default=None, max_length=30)
+    custom_unit_1_basis: Optional[str] = None
+    custom_unit_1_factor: Optional[Decimal] = Field(default=None, gt=0)
+    custom_unit_2_label: Optional[str] = Field(default=None, max_length=30)
+    custom_unit_2_basis: Optional[str] = None
+    custom_unit_2_factor: Optional[Decimal] = Field(default=None, gt=0)
+
     is_optional: bool = True
     is_active: bool = True
+
+    @field_validator("custom_unit_1_basis", "custom_unit_2_basis")
+    @classmethod
+    def _validate_basis(cls, value):
+        if value is not None and value not in BASIS_CHOICES:
+            raise ValueError(f"basis must be one of {BASIS_CHOICES}")
+        return value
 
 
 class ProductSparepartOut(ORMModel):
@@ -128,6 +153,12 @@ class ProductSparepartOut(ORMModel):
     name: str
     unit_price: Decimal
     qty_per_unit: Decimal
+    custom_unit_1_label: Optional[str] = None
+    custom_unit_1_basis: Optional[str] = None
+    custom_unit_1_factor: Optional[Decimal] = None
+    custom_unit_2_label: Optional[str] = None
+    custom_unit_2_basis: Optional[str] = None
+    custom_unit_2_factor: Optional[Decimal] = None
     is_optional: bool
     is_active: bool
 

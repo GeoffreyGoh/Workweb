@@ -107,20 +107,21 @@
 
             <!-- Optional accessories this product may need (bracket, motor
                  kit, end cap...). Not shared across products - each row
-                 belongs only to this product, same as Options/Colors. -->
+                 belongs only to this product, same as Options/Colors.
+
+                 Each sparepart is a card, not a table row - a plain row
+                 is too narrow once the optional custom-unit fields (used
+                 for things priced "per metre of width" instead of "N per
+                 main unit") are added underneath. -->
             <div class="field col-4">
               <label data-i18n="product.spareparts">Spareparts (optional accessories)</label>
-              <table class="data" id="sparepartTable" style="margin-bottom:8px">
-                <thead>
-                  <tr>
-                    <th data-i18n="product.sparepartName">Name</th>
-                    <th class="right" style="width:160px" data-i18n="product.unitPrice">Unit Price</th>
-                    <th class="right" style="width:140px" data-i18n="product.sparepartQtyPerUnit">Qty per unit</th>
-                    <th style="width:90px"></th>
-                  </tr>
-                </thead>
-                <tbody id="sparepartRows"></tbody>
-              </table>
+              <div class="hint" data-i18n="product.sparepartCustomUnitHint">
+                By default a sparepart's quantity is "qty per unit x main quantity" (e.g. 2 brackets per blind).
+                Use a custom unit instead when it's priced by a real measurement - e.g. "per m width" multiplies
+                by the line's width in metres. Fill in the second custom unit too if it needs two measurements
+                at once (e.g. width AND height).
+              </div>
+              <div id="sparepartCards"></div>
               <button class="btn small" id="addSparepartBtn" type="button"
                       data-i18n="product.addSparepart">+ Add sparepart</button>
             </div>

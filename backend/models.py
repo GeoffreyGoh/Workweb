@@ -390,7 +390,29 @@ class ProductSparepart(Base):
     )
     name = Column(String(100), nullable=False)
     unit_price = Column(Money(), nullable=False, default=Decimal("0.00"))
+    # Legacy/default rule: sparepart qty = qty_per_unit x main line's qty
+    # (e.g. 2 brackets per blind). Still the fallback whenever neither
+    # custom unit below is set, so every sparepart created before this
+    # feature keeps behaving exactly as it did.
     qty_per_unit = Column(Qty(), nullable=False, default=Decimal("1.00"))
+
+    # Up to 2 optional custom units, for spareparts priced by a real-world
+    # measurement instead of "per piece of the main product" - e.g. a
+    # weatherstrip sold "per metre of width" or an edge trim needed for
+    # both width AND height. Each component reads one measurement off the
+    # quotation/invoice line it is attached to (basis) and multiplies it
+    # by factor; the two components ADD together when both are set (so
+    # width + height both contribute). label is pure display text shown
+    # next to the amount - it does not affect the calculation at all.
+    # basis is one of: 'quantity' | 'width_cm' | 'height_cm' | 'measure'
+    # (measure = the sqm/metre/piece figure the main line is billed on).
+    custom_unit_1_label = Column(String(30))
+    custom_unit_1_basis = Column(String(20))
+    custom_unit_1_factor = Column(Qty())
+    custom_unit_2_label = Column(String(30))
+    custom_unit_2_basis = Column(String(20))
+    custom_unit_2_factor = Column(Qty())
+
     is_optional = Column(Boolean, nullable=False, default=True)
     is_active = Column(Boolean, nullable=False, default=True)
 

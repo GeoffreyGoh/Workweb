@@ -187,44 +187,128 @@ function closeEditor() {
 // below reads the DOM directly when the form is submitted, matching how
 // the rest of this form already works (readForm() does the same for the
 // main fields).
+//
+// Rendered as cards rather than table rows: the two optional custom-unit
+// groups (label + basis + factor each) don't fit in a table cell
+// legibly, and most spareparts only ever use the simple qty-per-unit
+// rule, so the custom-unit fields are visually secondary (smaller, under
+// a sub-heading) rather than competing for space with name/price.
 
-const sparepartRowsEl = document.getElementById('sparepartRows');
+const BASIS_OPTIONS = [
+  { value: '', label: '(not used)' },
+  { value: 'quantity', label: 'Main quantity' },
+  { value: 'width_cm', label: 'Width (cm)' },
+  { value: 'height_cm', label: 'Height (cm)' },
+  { value: 'measure', label: 'Measure (sqm/metre/panel billed)' },
+];
 
-function sparepartRowHtml(sp) {
+const sparepartCardsEl = document.getElementById('sparepartCards');
+
+function basisOptionsHtml(selected) {
+  return BASIS_OPTIONS.map(
+    (o) => `<option value="${o.value}" ${o.value === (selected || '') ? 'selected' : ''}>${esc(o.label)}</option>`
+  ).join('');
+}
+
+function sparepartCardHtml(sp) {
   const name = sp ? sp.name : '';
   const price = sp ? sp.unit_price : 0;
   const qty = sp ? sp.qty_per_unit : 1;
   return `
-    <tr>
-      <td><input type="text" class="spName" maxlength="100" value="${esc(name)}" required></td>
-      <td><input type="number" class="spPrice num" min="0" step="0.01" value="${esc(price)}"></td>
-      <td><input type="number" class="spQty num" min="0.01" step="0.01" value="${esc(qty)}"></td>
-      <td class="right"><button class="btn small danger" type="button" data-remove-sparepart>&times;</button></td>
-    </tr>`;
+    <div class="sparepart-card" style="border:1px solid var(--border); border-radius:6px; padding:10px; margin-bottom:8px">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end">
+        <div class="field" style="flex:2; min-width:160px">
+          <label data-i18n="product.sparepartName">Name</label>
+          <input type="text" class="spName" maxlength="100" value="${esc(name)}" required>
+        </div>
+        <div class="field" style="width:140px">
+          <label data-i18n="product.unitPrice">Unit Price</label>
+          <input type="number" class="spPrice num" min="0" step="0.01" value="${esc(price)}">
+        </div>
+        <div class="field" style="width:120px">
+          <label data-i18n="product.sparepartQtyPerUnit">Qty per unit</label>
+          <input type="number" class="spQty num" min="0.01" step="0.01" value="${esc(qty)}">
+        </div>
+        <button class="btn small danger" type="button" data-remove-sparepart>&times;</button>
+      </div>
+      <div class="hint" style="margin-top:6px" data-i18n="product.sparepartCustomUnitSubhead">
+        Optional - use instead of Qty per unit when priced by a real measurement:
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:4px">
+        ${sparepartCustomUnitHtml(1, sp)}
+        ${sparepartCustomUnitHtml(2, sp)}
+      </div>
+    </div>`;
+}
+
+function sparepartCustomUnitHtml(n, sp) {
+  const label = sp ? sp[`custom_unit_${n}_label`] : '';
+  const basis = sp ? sp[`custom_unit_${n}_basis`] : '';
+  const factor = sp ? sp[`custom_unit_${n}_factor`] : '';
+  return `
+    <div style="display:flex; gap:6px; align-items:flex-end; border-left:2px solid var(--border); padding-left:8px">
+      <div class="field" style="width:120px">
+        <label data-i18n="product.sparepartUnitLabel">Unit label</label>
+        <input type="text" class="spCuLabel${n}" maxlength="30" value="${esc(label || '')}" placeholder="e.g. per m width">
+      </div>
+      <div class="field" style="width:150px">
+        <label data-i18n="product.sparepartBasis">Based on</label>
+        <select class="spCuBasis${n}">${basisOptionsHtml(basis)}</select>
+      </div>
+      <div class="field" style="width:100px">
+        <label data-i18n="product.sparepartFactor">Factor</label>
+        <input type="number" class="spCuFactor${n}" min="0" step="0.0001" value="${esc(factor || '')}" placeholder="e.g. 0.01">
+      </div>
+    </div>`;
 }
 
 function renderSpareparts(spareparts) {
-  sparepartRowsEl.innerHTML = (spareparts || []).map(sparepartRowHtml).join('');
+  sparepartCardsEl.innerHTML = (spareparts || []).map(sparepartCardHtml).join('');
 }
 
 function readSpareparts() {
-  return Array.from(sparepartRowsEl.querySelectorAll('tr')).map((row) => ({
-    name: row.querySelector('.spName').value.trim(),
-    unit_price: Number(row.querySelector('.spPrice').value || 0),
-    qty_per_unit: Number(row.querySelector('.spQty').value || 1),
-    is_optional: true, // the only kind this form creates - see the clarify log
-    is_active: true,
-  })).filter((sp) => sp.name); // drop a row left blank by mistake rather than reject the whole save
+  return Array.from(sparepartCardsEl.querySelectorAll('.sparepart-card')).map((card) => {
+    const readCustomUnit = (n) => {
+      const label = card.querySelector(`.spCuLabel${n}`).value.trim();
+      const basis = card.querySelector(`.spCuBasis${n}`).value;
+      const factorRaw = card.querySelector(`.spCuFactor${n}`).value;
+      // A custom unit only counts if it actually has a basis chosen -
+      // a label typed without picking "Based on" is treated as unset
+      // rather than silently defaulting to something, since there is
+      // no safe guess for which measurement was intended.
+      if (!basis) return { label: null, basis: null, factor: null };
+      return {
+        label: label || null,
+        basis,
+        factor: factorRaw === '' ? null : Number(factorRaw),
+      };
+    };
+    const cu1 = readCustomUnit(1);
+    const cu2 = readCustomUnit(2);
+    return {
+      name: card.querySelector('.spName').value.trim(),
+      unit_price: Number(card.querySelector('.spPrice').value || 0),
+      qty_per_unit: Number(card.querySelector('.spQty').value || 1),
+      custom_unit_1_label: cu1.label,
+      custom_unit_1_basis: cu1.basis,
+      custom_unit_1_factor: cu1.factor,
+      custom_unit_2_label: cu2.label,
+      custom_unit_2_basis: cu2.basis,
+      custom_unit_2_factor: cu2.factor,
+      is_optional: true, // the only kind this form creates - see the clarify log
+      is_active: true,
+    };
+  }).filter((sp) => sp.name); // drop a card left blank by mistake rather than reject the whole save
 }
 
 document.getElementById('addSparepartBtn').addEventListener('click', () => {
-  sparepartRowsEl.insertAdjacentHTML('beforeend', sparepartRowHtml(null));
+  sparepartCardsEl.insertAdjacentHTML('beforeend', sparepartCardHtml(null));
 });
 
-sparepartRowsEl.addEventListener('click', (event) => {
+sparepartCardsEl.addEventListener('click', (event) => {
   const button = event.target.closest('[data-remove-sparepart]');
   if (!button) return;
-  button.closest('tr').remove();
+  button.closest('.sparepart-card').remove();
 });
 
 /** Blank numeric inputs mean "no limit", which the API wants as null. */

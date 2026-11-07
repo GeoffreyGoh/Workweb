@@ -215,19 +215,56 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
   }
 
   function addSparepartRow(parentLine, sparepart) {
-    const qtyPerUnit = Number(sparepart.qty_per_unit) || 1;
-    const mainQty = num(parentLine.refs.qty.value);
+    const qty = computeSparepartQty(parentLine, sparepart);
     return addRow(
       {
         is_sparepart: true,
         product_name: sparepart.name,
         unit_price: sparepart.unit_price,
-        quantity: round2(mainQty * qtyPerUnit),
+        quantity: qty,
         description: null,
         line_discount_pct: null,
       },
-      { parentUid: parentLine.uid, qtyPerUnit }
+      { parentUid: parentLine.uid, sparepartRule: sparepart }
     );
+  }
+
+  /**
+   * How many units of a sparepart the parent line needs right now.
+   *
+   * Default rule: qty_per_unit x the main line's quantity (e.g. 2
+   * brackets per blind) - unchanged from before this feature existed.
+   *
+   * Custom-unit rule: if either custom_unit_N is configured, it REPLACES
+   * the default rule rather than combining with it - a sparepart is
+   * either "N per main unit" or "driven by a real measurement", not
+   * both at once, so there's one unambiguous formula per sparepart. Both
+   * custom units (if both are set) ADD together, e.g. a trim that needs
+   * both width and height contributes width_m + height_m.
+   */
+  function computeSparepartQty(parentLine, sparepart) {
+    const mainQty = num(parentLine.refs.qty.value);
+    const basisValue = (basis) => {
+      if (basis === 'width_cm') return num(parentLine.refs.width.value);
+      if (basis === 'height_cm') return num(parentLine.refs.height.value);
+      if (basis === 'measure') return computeLine(parentLine, 0).measure;
+      return mainQty; // 'quantity' or anything unrecognised
+    };
+
+    const hasCustom = sparepart.custom_unit_1_basis || sparepart.custom_unit_2_basis;
+    if (!hasCustom) {
+      const qtyPerUnit = Number(sparepart.qty_per_unit) || 1;
+      return round2(mainQty * qtyPerUnit);
+    }
+
+    let total = 0;
+    if (sparepart.custom_unit_1_basis) {
+      total += basisValue(sparepart.custom_unit_1_basis) * (Number(sparepart.custom_unit_1_factor) || 0);
+    }
+    if (sparepart.custom_unit_2_basis) {
+      total += basisValue(sparepart.custom_unit_2_basis) * (Number(sparepart.custom_unit_2_factor) || 0);
+    }
+    return round2(total);
   }
 
   /** Remove every sparepart row that auto-followed this product line. */
@@ -248,11 +285,10 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
    */
   function syncSparepartQuantities(parentLine) {
     if (parentLine.isSparepart) return;
-    const mainQty = num(parentLine.refs.qty.value);
     lines
-      .filter((l) => l.isSparepart && l.parentUid === parentLine.uid && l.qtyPerUnit)
+      .filter((l) => l.isSparepart && l.parentUid === parentLine.uid && l.sparepartRule)
       .forEach((l) => {
-        l.refs.qty.value = round2(mainQty * l.qtyPerUnit);
+        l.refs.qty.value = computeSparepartQty(parentLine, l.sparepartRule);
       });
   }
 
@@ -424,7 +460,7 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       product: null,
       isSparepart: false,
       parentUid: opts && opts.parentUid ? opts.parentUid : null,
-      qtyPerUnit: opts && opts.qtyPerUnit ? opts.qtyPerUnit : null,
+      sparepartRule: (opts && opts.sparepartRule) || null,
       refs: {
         lineNo: tr.querySelector('.lineNo'),
         prodInput: tr.querySelector('.prodInput'),
@@ -474,9 +510,12 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     ['width', 'height', 'price', 'disc'].forEach((key) =>
       line.refs[key].addEventListener('input', recalc)
     );
-    // qty additionally has to re-scale any sparepart children that follow
-    // this line - a normal .addEventListener('input', recalc) would miss
-    // that, so qty gets its own handler instead of joining the loop above.
+    // width/height/qty can all drive a sparepart's quantity now (a custom
+    // unit may read width_cm, height_cm, or measure - not just quantity),
+    // so all three re-scale any sparepart children, not just qty alone.
+    ['width', 'height'].forEach((key) =>
+      line.refs[key].addEventListener('input', () => syncSparepartQuantities(line))
+    );
     line.refs.qty.addEventListener('input', () => {
       syncSparepartQuantities(line);
       recalc();
