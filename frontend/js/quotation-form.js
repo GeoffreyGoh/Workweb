@@ -94,11 +94,22 @@ attachAutocomplete({
   onPick: (c) => setCustomer(c),
 });
 
+// Typing a name with no matching pick is allowed - buildPayload() below
+// sends it as customer_name instead of customer_id, and the server
+// auto-saves it as a new (or reused, by name+description) customer.
+// This box therefore has 3 states: a picked existing customer
+// (state.customer set), a typed-but-unmatched name (state.customer
+// null, box non-empty - the new case), or genuinely empty.
 customerInput.addEventListener('input', () => {
   if (state.customer && customerInput.value.trim() !== state.customer.name) {
     state.customer = null;
-    el('customerHint').textContent = 'No customer selected';
   }
+  const typed = customerInput.value.trim();
+  el('customerHint').textContent = state.customer
+    ? `${state.customer.code} — selected`
+    : typed
+    ? 'New customer — will be saved when you save this quotation'
+    : 'No customer selected';
 });
 
 /* -------------------------------------------------------- line items */
@@ -153,9 +164,15 @@ el('currency').addEventListener('change', state.editor.recalc);
 /* -------------------------------------------------------------- save */
 
 function buildPayload() {
-  if (!state.customer) throw new Error('Please select a customer.');
+  const typedName = customerInput.value.trim();
+  if (!state.customer && !typedName) throw new Error('Please select or type a customer.');
   return {
-    customer_id: state.customer.id,
+    // A picked existing customer sends customer_id; a typed-but-unmatched
+    // name sends customer_name instead, and the server auto-saves it
+    // (reusing an existing name+description match, or creating a new
+    // record) - see routers/quotations._find_or_create_customer.
+    customer_id: state.customer ? state.customer.id : null,
+    customer_name: state.customer ? null : typedName,
     description: orNull(el('description').value),
     quotation_date: orNull(el('quotationDate').value),
     last_follow_up: orNull(el('lastFollowUp').value),

@@ -124,6 +124,14 @@ class Customer(Base):
     id = Column(Integer, primary_key=True)
     code = Column(String(30), unique=True, nullable=False, index=True)
     name = Column(String(150), nullable=False, index=True)
+    # Distinguishes two saved records for the SAME person/company at
+    # different sites (e.g. "Hendra - Warehouse" vs "Hendra - HQ").
+    # Populated from the quotation's own `description` the first time a
+    # given name+site combination is auto-saved from the quotation form -
+    # see routers/quotations.py's _find_or_create_customer. NULL for every
+    # customer entered the normal way (admin Customers page), which never
+    # sets this.
+    site_label = Column(String(150))
     nik_npwp = Column(String(40))
     address = Column(Text)
     deliver_to = Column(String(150))

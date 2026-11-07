@@ -204,6 +204,10 @@ class ProductOut(ORMModel, ProductBase):
 class CustomerBase(BaseModel):
     code: str = Field(min_length=1, max_length=30)
     name: str = Field(min_length=1, max_length=150)
+    # See models.Customer.site_label - only ever set by the quotation
+    # form's auto-save flow, never typed directly on the admin Customers
+    # page (the field doesn't appear there).
+    site_label: Optional[str] = Field(default=None, max_length=150)
     nik_npwp: Optional[str] = None
     address: Optional[str] = None
     deliver_to: Optional[str] = None
@@ -291,9 +295,21 @@ class QuotationItemOut(ORMModel):
 
 
 class QuotationBase(BaseModel):
-    customer_id: int
+    # Either an existing customer's id, OR customer_name below (new
+    # customer, auto-saved on create - see
+    # routers/quotations._find_or_create_customer). Exactly one of the
+    # two must be given; validated in create_quotation itself since the
+    # rule spans two fields.
+    customer_id: Optional[int] = None
+    # A name typed directly into the quotation form with no matching
+    # pick from the customer list. Combined with `description` below to
+    # decide whether this reuses an existing saved customer or creates a
+    # new one - see _find_or_create_customer for the exact matching rule.
+    customer_name: Optional[str] = Field(default=None, max_length=150)
     # Free-text, e.g. "Branch 2 - Warehouse" - distinguishes two quotations
-    # for the same customer at different sites. Optional; purely a label.
+    # for the same customer at different sites. Optional; purely a label
+    # on the quotation UNLESS customer_name is also set, in which case it
+    # doubles as the new/matched customer's site_label (see above).
     description: Optional[str] = None
     # Which entity issues this. Defaults to the user's own company.
     company_id: Optional[int] = None

@@ -69,6 +69,61 @@ def _load_products(db: Session, items) -> dict:
     return found
 
 
+def _next_customer_code(db: Session) -> str:
+    """Next free CUST-### code, same style as seed.py's manually-entered
+    customers (CUST-001, CUST-002, ...). Used only by
+    _find_or_create_customer - a customer entered through the admin
+    Customers page always supplies its own code instead.
+    """
+    last = (
+        db.query(models.Customer.code)
+        .filter(models.Customer.code.like("CUST-%"))
+        .order_by(models.Customer.code.desc())
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last[0].rsplit("-", 1)[1]) + 1
+        except (IndexError, ValueError):
+            seq = 1
+    return f"CUST-{seq:03d}"
+
+
+def _find_or_create_customer(db: Session, name: str, site_label):
+    """Auto-save flow for a customer typed directly on the quotation
+    form with no pick from the autocomplete list.
+
+    Matching rule (Geoffrey's explicit choice): the SAME name + the SAME
+    site_label reuses the existing customer record; a different
+    site_label (or no prior record at all) creates a NEW one - e.g.
+    "Hendra" with description "Warehouse" and "Hendra" with description
+    "HQ" become two separate saved customers, not one customer with two
+    quotations. Comparison is exact-match on both fields (case-sensitive)
+    - deliberately simple, same spirit as the "no fuzzy category
+    merging" decision made for products earlier in this project.
+    """
+    name = name.strip()
+    site_label = (site_label or "").strip() or None
+
+    existing = (
+        db.query(models.Customer)
+        .filter(models.Customer.name == name, models.Customer.site_label == site_label)
+        .first()
+    )
+    if existing:
+        return existing
+
+    customer = models.Customer(
+        code=_next_customer_code(db),
+        name=name,
+        site_label=site_label,
+    )
+    db.add(customer)
+    db.flush()  # need customer.id before the quotation points at it, before commit
+    return customer
+
+
 def _apply_items(db: Session, quotation: models.Quotation, items) -> None:
     """Replace the quotation's lines, repricing everything from scratch."""
     normal_items = [item for item in items if not item.is_sparepart]
@@ -202,12 +257,27 @@ def create_quotation(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    customer = db.get(models.Customer, payload.customer_id)
-    if not customer:
-        raise HTTPException(status_code=422, detail="Unknown customer_id")
+    # Exactly one of customer_id (pick from the list) or customer_name
+    # (typed fresh, auto-saved) must be given - see schemas.QuotationBase.
+    if payload.customer_id and payload.customer_name:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either customer_id or customer_name, not both",
+        )
+    if payload.customer_id:
+        customer = db.get(models.Customer, payload.customer_id)
+        if not customer:
+            raise HTTPException(status_code=422, detail="Unknown customer_id")
+    elif payload.customer_name:
+        customer = _find_or_create_customer(db, payload.customer_name, payload.description)
+    else:
+        raise HTTPException(
+            status_code=422, detail="Provide either customer_id or customer_name"
+        )
     company = auth.resolve_company(db, payload.company_id, current_user)
 
-    header = payload.model_dump(exclude={"items"})
+    header = payload.model_dump(exclude={"items", "customer_name"})
+    header["customer_id"] = customer.id
     quotation = models.Quotation(**header)
     quotation.company_id = company.id
     quotation.quotation_date = payload.quotation_date or date.today()
@@ -248,11 +318,28 @@ def update_quotation(
             ),
         )
 
-    customer = db.get(models.Customer, payload.customer_id)
-    if not customer:
-        raise HTTPException(status_code=422, detail="Unknown customer_id")
+    # Same either-or rule as create_quotation. On an UPDATE, omitting
+    # both simply means "leave the customer as-is" (QuotationUpdate's
+    # fields are all Optional, submitted as exclude_unset below).
+    if payload.customer_id and payload.customer_name:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either customer_id or customer_name, not both",
+        )
+    new_customer_id = None
+    customer = None
+    if payload.customer_id:
+        customer = db.get(models.Customer, payload.customer_id)
+        if not customer:
+            raise HTTPException(status_code=422, detail="Unknown customer_id")
+        new_customer_id = customer.id
+    elif payload.customer_name:
+        customer = _find_or_create_customer(db, payload.customer_name, payload.description)
+        new_customer_id = customer.id
 
-    changes = payload.model_dump(exclude={"items"}, exclude_unset=True)
+    changes = payload.model_dump(exclude={"items", "customer_name"}, exclude_unset=True)
+    if new_customer_id is not None:
+        changes["customer_id"] = new_customer_id
     new_company = changes.pop("company_id", None)
     if new_company and new_company != quotation.company_id:
         # The number carries the company code, so it would no longer match.
@@ -266,7 +353,13 @@ def update_quotation(
         )
     for field, value in changes.items():
         setattr(quotation, field, value)
-    _fill_from_customer(quotation, customer)
+    # Only re-copy customer snapshot fields (nik_npwp/address/phone/...)
+    # when the customer actually changed this call - otherwise leave
+    # whatever the quotation already has (which may have been edited by
+    # hand since the customer was first picked, per QuotationBase's
+    # "snapshot, not a live link" comment).
+    if new_customer_id is not None:
+        _fill_from_customer(quotation, customer)
 
     # Header discount/PPN may have moved, so reprice even if lines are unchanged.
     items = payload.items if payload.items is not None else [

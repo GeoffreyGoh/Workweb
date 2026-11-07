@@ -183,6 +183,18 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     // text that used to display alongside the name.
     line.refs.prodCode.textContent = '';
 
+    // Auto-fill the line's own Description box from the product
+    // catalogue's Description - same idea as Code/Category already
+    // existing as product-level fields; a salesperson can still edit or
+    // clear it by hand, this is just a starting point. Only on a fresh
+    // pick (resetPrice=true), not when re-applying a saved line - a
+    // saved line's description was something the salesperson typed (or
+    // deliberately left blank) and must not be silently overwritten by
+    // the catalogue text on every page load.
+    if (resetPrice) {
+      line.refs.desc.value = product.description || '';
+    }
+
     if (resetPrice) line.refs.price.value = Number(product.unit_price);
     renderComponents(line, product);
 
