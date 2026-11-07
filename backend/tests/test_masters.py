@@ -21,12 +21,33 @@ class TestProducts:
         assert dec(fetched["unit_price"]) == dec("275000.00")
         assert dec(fetched["max_width_cm"]) == dec("400.00")
 
-    def test_duplicate_code_is_409(self, client, admin, products):
+    def test_exact_code_name_category_match_is_409(self, client, admin, products):
+        # Same code, same name, same (absent) category as the "RB-SQM" /
+        # "Roller Blind" fixture - this is the one combination still
+        # blocked under the new rule (code alone is no longer unique).
         response = client.post("/products", headers=admin, json={
-            "code": "RB-SQM", "name": "Clash", "price_unit": "per_unit",
+            "code": "RB-SQM", "name": "Roller Blind", "price_unit": "per_unit",
             "unit_price": 1})
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
+
+    def test_same_code_different_name_is_allowed(self, client, admin, products):
+        # Geoffrey's explicit choice: code/name/category "can be doubled
+        # unless same" - reusing a code for a genuinely different
+        # product (e.g. a shared supplier SKU) must succeed now.
+        response = client.post("/products", headers=admin, json={
+            "code": "RB-SQM", "name": "Clash", "price_unit": "per_unit",
+            "unit_price": 1})
+        assert response.status_code == 201
+
+    def test_same_code_name_different_category_is_allowed(self, client, admin, products):
+        # Same code+name as the fixture, but a category where the
+        # fixture has none - differs on one of the three fields, so it
+        # is a distinct product, not a duplicate.
+        response = client.post("/products", headers=admin, json={
+            "code": "RB-SQM", "name": "Roller Blind", "category": "Premium",
+            "price_unit": "per_unit", "unit_price": 1})
+        assert response.status_code == 201
 
     def test_invalid_price_unit_is_422(self, client, admin):
         response = client.post("/products", headers=admin, json={

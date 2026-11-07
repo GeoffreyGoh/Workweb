@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     TypeDecorator,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -146,9 +147,25 @@ class Customer(Base):
 
 class Product(Base):
     __tablename__ = "products"
+    # Code alone no longer has to be unique (see the column comment below) -
+    # the real identity of a catalogue entry is code+name+category
+    # together. NOTE: standard SQL unique-constraint semantics treat NULL
+    # as never equal to another NULL, so two rows that both have
+    # category=NULL are NOT caught by this DB constraint alone - the
+    # application-level check in routers/products.py explicitly handles
+    # that case (comparing NULL category to NULL category as equal),
+    # since relying on the DB constraint alone would silently miss it.
+    __table_args__ = (
+        UniqueConstraint("code", "name", "category", name="uq_products_code_name_category"),
+    )
 
     id = Column(Integer, primary_key=True)
-    code = Column(String(40), unique=True, nullable=False, index=True)
+    # No longer globally unique on its own - see the unique constraint
+    # below. A code CAN repeat (e.g. a reused supplier SKU for a
+    # genuinely different variant), as long as it isn't paired with the
+    # exact same name AND category too - that combination is treated as
+    # the same product and still blocked, same spirit as before.
+    code = Column(String(40), nullable=False, index=True)
     name = Column(String(150), nullable=False, index=True)
     category = Column(String(60))
     price_unit = Column(String(20), nullable=False, default="per_sqm")

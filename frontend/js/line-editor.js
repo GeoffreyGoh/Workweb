@@ -98,11 +98,15 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     } else if (line.product.price_unit === 'per_meter') {
       measure = (width / 100) * qty;
     } else if (line.product.price_unit === 'per_sqm_min1m') {
-      // "RUMUS BLINDS" - mirrors pricing.compute_measure: both sides
-      // floored at 1m/100cm before multiplying, even if the real
-      // measurement is smaller.
-      const widthM = Math.max(width, 100) / 100;
-      const heightM = Math.max(height, 100) / 100;
+      // "RUMUS BLINDS" - mirrors pricing.compute_measure: each side
+      // floored at the PRODUCT's own configured minimum (min_width_cm/
+      // min_height_cm), falling back to 1m/100cm only when the product
+      // has no minimum set. Must stay in sync with the backend formula -
+      // this is a live preview only, the server's number is what saves.
+      const widthFloor = line.product.min_width_cm != null ? Number(line.product.min_width_cm) : 100;
+      const heightFloor = line.product.min_height_cm != null ? Number(line.product.min_height_cm) : 100;
+      const widthM = Math.max(width, widthFloor) / 100;
+      const heightM = Math.max(height, heightFloor) / 100;
       measure = widthM * heightM * qty;
     } else if (line.product.price_unit === 'per_curtain_panel') {
       // "RUMUS GORDEN" - mirrors pricing.compute_measure exactly, including
@@ -127,12 +131,18 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
 
   function markDimensions(line) {
     if (!line.product) return;
+    // per_sqm_min1m accepts (and floor-bills) anything below the
+    // product's minimum - see pricing.compute_measure/validate_dimensions
+    // on the backend - so the minimum side of the check is skipped here
+    // too, to match. The maximum still flags normally.
+    const flooredInsteadOfRejected = line.product.price_unit === 'per_sqm_min1m';
     const check = (input, min, max) => {
       const value = num(input.value);
+      const effectiveMin = flooredInsteadOfRejected ? null : min;
       const bad =
         !input.disabled &&
         value > 0 &&
-        ((min !== null && min !== undefined && value < Number(min)) ||
+        ((effectiveMin !== null && effectiveMin !== undefined && value < Number(effectiveMin)) ||
           (max !== null && max !== undefined && value > Number(max)));
       input.classList.toggle('invalid', Boolean(bad));
     };

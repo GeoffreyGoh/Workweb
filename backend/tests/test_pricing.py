@@ -48,6 +48,28 @@ class TestMeasure:
         with pytest.raises(pricing.PricingError, match="Unknown price_unit"):
             pricing.compute_measure("per_furlong", 1, 100, 100)
 
+    def test_min1m_defaults_to_100cm_when_product_has_no_minimum(self):
+        # No min_width_cm/min_height_cm passed - falls back to the
+        # original flat 1m/100cm floor, unchanged behaviour.
+        assert pricing.compute_measure("per_sqm_min1m", 1, 75, 60) == Decimal("1.0000")
+
+    def test_min1m_uses_the_products_own_configured_minimum(self):
+        # A product configured with a 150cm minimum floors there instead
+        # of the old hardcoded 100cm - this is the fix: the formula now
+        # actually reads the product's own min_width_cm/min_height_cm.
+        measure = pricing.compute_measure(
+            "per_sqm_min1m", 1, 80, 80, min_width_cm=150, min_height_cm=150,
+        )
+        assert measure == Decimal("2.2500")  # 1.5m x 1.5m
+
+    def test_min1m_real_measurement_above_minimum_is_unaffected(self):
+        # A real measurement already above the configured minimum bills
+        # on its actual size, not the floor.
+        measure = pricing.compute_measure(
+            "per_sqm_min1m", 1, 200, 200, min_width_cm=150, min_height_cm=150,
+        )
+        assert measure == Decimal("4.0000")  # 2m x 2m, unfloored
+
 
 # -------------------------------------------------------------- validation
 class TestDimensionValidation:
@@ -75,6 +97,21 @@ class TestDimensionValidation:
 
     def test_null_bound_means_no_limit(self):
         pricing.validate_dimensions(product(), Decimal("99999"), Decimal("99999"), 1)
+
+    def test_min1m_accepts_below_minimum_instead_of_rejecting(self):
+        # per_sqm_min1m's whole point is to accept a smaller real
+        # measurement and bill it at the floor (see TestMeasure above) -
+        # validate_dimensions must not reject it before it gets there.
+        p = product(price_unit="per_sqm_min1m", min_width_cm=Decimal("150"), min_height_cm=Decimal("150"))
+        pricing.validate_dimensions(p, Decimal("80"), Decimal("80"), 1)  # must not raise
+
+    def test_min1m_still_rejects_above_maximum(self):
+        # The floor-instead-of-reject exception is for the MINIMUM only -
+        # a genuinely too-big order still can't be made, so the maximum
+        # bound still applies normally.
+        p = product(price_unit="per_sqm_min1m", max_width_cm=Decimal("300"))
+        with pytest.raises(pricing.PricingError, match="exceeds the maximum"):
+            pricing.validate_dimensions(p, Decimal("350"), Decimal("100"), 1)
 
     def test_per_sqm_requires_both_dimensions(self):
         with pytest.raises(pricing.PricingError, match="height_cm is required"):

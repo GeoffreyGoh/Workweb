@@ -51,11 +51,21 @@ def validate_dimensions(product, width_cm, height_cm, line_no: int) -> None:
 
     Only dimensions the product actually prices on are required. A NULL bound
     on the product means "no limit on that side".
+
+    per_sqm_min1m is the one exception to the minimum check: its entire
+    point ("RUMUS BLINDS") is to ACCEPT a smaller real measurement and bill
+    it as if it were the product's configured minimum (see
+    compute_measure) - rejecting anything below that minimum here would
+    make the floor-billing formula pointless, since no order small enough
+    to need flooring could ever reach it. The maximum bound still applies
+    normally - there is no equivalent "bill it as if it were smaller" case
+    for an order that is genuinely too big to make.
     """
     needs_width = product.price_unit in (
         "per_sqm", "per_meter", "per_sqm_min1m", "per_curtain_panel",
     )
     needs_height = product.price_unit in ("per_sqm", "per_sqm_min1m", "per_curtain_panel")
+    floors_instead_of_rejects = product.price_unit == "per_sqm_min1m"
 
     def fail(msg):
         raise PricingError(f"Line {line_no} ({product.code}): {msg}")
@@ -63,7 +73,11 @@ def validate_dimensions(product, width_cm, height_cm, line_no: int) -> None:
     if needs_width:
         if width_cm is None or width_cm <= 0:
             fail("width_cm is required and must be greater than 0")
-        if product.min_width_cm is not None and width_cm < product.min_width_cm:
+        if (
+            not floors_instead_of_rejects
+            and product.min_width_cm is not None
+            and width_cm < product.min_width_cm
+        ):
             fail(f"width {width_cm} cm is below the minimum {product.min_width_cm} cm")
         if product.max_width_cm is not None and width_cm > product.max_width_cm:
             fail(f"width {width_cm} cm exceeds the maximum {product.max_width_cm} cm")
@@ -71,17 +85,33 @@ def validate_dimensions(product, width_cm, height_cm, line_no: int) -> None:
     if needs_height:
         if height_cm is None or height_cm <= 0:
             fail("height_cm is required and must be greater than 0")
-        if product.min_height_cm is not None and height_cm < product.min_height_cm:
+        if (
+            not floors_instead_of_rejects
+            and product.min_height_cm is not None
+            and height_cm < product.min_height_cm
+        ):
             fail(f"height {height_cm} cm is below the minimum {product.min_height_cm} cm")
         if product.max_height_cm is not None and height_cm > product.max_height_cm:
             fail(f"height {height_cm} cm exceeds the maximum {product.max_height_cm} cm")
 
 
-def compute_measure(price_unit: str, quantity, width_cm, height_cm, fabric_width_cm=None) -> Decimal:
+def compute_measure(
+    price_unit: str, quantity, width_cm, height_cm, fabric_width_cm=None,
+    min_width_cm=None, min_height_cm=None,
+) -> Decimal:
     """Billable quantity for a line, in the product's pricing unit.
 
     `fabric_width_cm` only matters for per_curtain_panel (the roll width of
     the specific curtain fabric); every other unit ignores it.
+
+    `min_width_cm`/`min_height_cm` only matter for per_sqm_min1m - the floor
+    each side is billed at is the PRODUCT's own configured minimum (set on
+    the catalogue entry), falling back to the 1m/100cm default only when the
+    product has no minimum configured at all. Previously this was a flat
+    100cm for every product regardless of its own min_width_cm/min_height_cm,
+    so a product explicitly configured with e.g. a 150cm minimum was still
+    only floored at 100cm here - the formula ignored the very setting meant
+    to drive it.
     """
     quantity = Decimal(str(quantity))
 
@@ -94,11 +124,15 @@ def compute_measure(price_unit: str, quantity, width_cm, height_cm, fabric_width
         return measure4(quantity)
 
     if price_unit == "per_sqm_min1m":
-        # "RUMUS BLINDS": both width and height are floored at 1m / 100cm
-        # before multiplying, even if the real measurement is smaller. A
-        # 75cm-wide blind is billed as if it were 100cm wide.
-        width_m = max(Decimal(str(width_cm)), Decimal("100")) / 100
-        height_m = max(Decimal(str(height_cm)), Decimal("100")) / 100
+        # "RUMUS BLINDS": each side is floored at its own minimum before
+        # multiplying, even if the real measurement is smaller. The floor
+        # is the product's configured min_width_cm/min_height_cm; only a
+        # product with no minimum set at all falls back to the 1m/100cm
+        # default this formula was named after.
+        width_floor = Decimal(str(min_width_cm)) if min_width_cm is not None else Decimal("100")
+        height_floor = Decimal(str(min_height_cm)) if min_height_cm is not None else Decimal("100")
+        width_m = max(Decimal(str(width_cm)), width_floor) / 100
+        height_m = max(Decimal(str(height_cm)), height_floor) / 100
         return measure4(width_m * height_m * quantity)
 
     if price_unit == "per_curtain_panel":
@@ -159,6 +193,8 @@ def price_line(product, item, header_discount_pct: Decimal, line_no: int) -> dic
     measure = compute_measure(
         product.price_unit, quantity, item.width_cm, item.height_cm,
         fabric_width_cm=getattr(product, "fabric_width_cm", None),
+        min_width_cm=getattr(product, "min_width_cm", None),
+        min_height_cm=getattr(product, "min_height_cm", None),
     )
 
     # Precedence: explicit manual override > the selected option's own price

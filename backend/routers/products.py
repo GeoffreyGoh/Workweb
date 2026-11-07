@@ -58,6 +58,30 @@ def list_products(
     return [_to_out(row) for row in rows]
 
 
+def _duplicate_product_query(db: Session, code, name, category, exclude_id=None):
+    """A product is a duplicate only when code, name, AND category all
+    match - any one field differing makes it a genuinely different
+    catalogue entry (Geoffrey's explicit choice: "can be doubled unless
+    same"). category is nullable, so None must compare equal to None
+    here explicitly - the database's own UniqueConstraint on these three
+    columns does NOT catch that case (SQL treats NULL as never equal to
+    another NULL), so this check is the real enforcement for a
+    no-category product; the DB constraint is a backstop for everything
+    else, not the primary guard.
+    """
+    query = db.query(models.Product).filter(
+        models.Product.code == code,
+        models.Product.name == name,
+    )
+    if category is None:
+        query = query.filter(models.Product.category.is_(None))
+    else:
+        query = query.filter(models.Product.category == category)
+    if exclude_id is not None:
+        query = query.filter(models.Product.id != exclude_id)
+    return query
+
+
 @router.get("/{product_id}", response_model=schemas.ProductOut)
 def get_product(
     product_id: int,
@@ -81,10 +105,22 @@ def create_product(
     The price list is what every quotation is built from, so a wrong code or
     price leaks into every document that uses it. Sales staff pick from the
     catalogue; only an admin decides what is in it.
+
+    code alone is no longer required to be globally unique - the same code
+    can be reused across genuinely different products (e.g. a shared
+    supplier SKU). Only an exact code+name+category match is rejected, as
+    that combination is the same catalogue entry in every practical sense.
     """
-    exists = db.query(models.Product).filter(models.Product.code == payload.code).first()
+    exists = _duplicate_product_query(db, payload.code, payload.name, payload.category).first()
     if exists:
-        raise HTTPException(status_code=409, detail=f"Product code '{payload.code}' already exists")
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"A product with code '{payload.code}', name '{payload.name}' and "
+                f"category '{payload.category or '(none)'}' already exists. Change "
+                "at least one of those three to add it as a distinct product."
+            ),
+        )
 
     # spareparts is a nested list, not a plain column - build it into
     # relationship objects rather than passing it straight to the model
@@ -107,10 +143,31 @@ def update_product(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_role("admin")),
 ):
-    """Edit a product, or retire it with is_active=false. Admin only."""
+    """Edit a product, or retire it with is_active=false. Admin only.
+
+    code itself cannot be changed here (not in ProductUpdate) - but name
+    and category can, so an edit could still collide with another
+    existing product that already shares this one's code - checked the
+    same way create_product does, excluding this product's own row.
+    """
     product = db.get(models.Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+
+    new_name = payload.name if payload.name is not None else product.name
+    new_category = payload.category if "category" in payload.model_fields_set else product.category
+    duplicate = _duplicate_product_query(
+        db, product.code, new_name, new_category, exclude_id=product.id
+    ).first()
+    if duplicate:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"A product with code '{product.code}', name '{new_name}' and "
+                f"category '{new_category or '(none)'}' already exists. Change "
+                "at least one of those three, or edit the existing one instead."
+            ),
+        )
 
     updates = payload.model_dump(exclude_unset=True, exclude={"spareparts"})
     for field, value in updates.items():
