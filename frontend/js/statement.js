@@ -101,11 +101,7 @@ el('invoiceRows').addEventListener('click', (event) => {
 el('paymentRows').addEventListener('click', async (event) => {
   const button = event.target.closest('[data-pdf]');
   if (!button) return;
-  try {
-    await openPdf('receipt', button.dataset.pdf);
-  } catch (err) {
-    showError(err.message);
-  }
+  window.location.href = `pdf-confirm.html?type=receipt&id=${button.dataset.pdf}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 ['fFrom', 'fTo'].forEach((id) =>

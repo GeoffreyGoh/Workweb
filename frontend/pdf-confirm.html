@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirm PDF &middot; Q2O</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+  <!-- Shared confirm-before-generate step for every document type that
+       prints a PDF (quotation, invoice, purchase order, delivery note,
+       receipt). Geoffrey asked for a chance to review/edit Notes and
+       Payment Terms (the two free-text fields that actually print) one
+       last time before the PDF is produced, instead of the PDF
+       generating the instant the button was clicked. -->
+  <div id="topbar"></div>
+
+  <div class="page">
+    <div class="page-head">
+      <h1 id="pageTitle">Confirm before generating PDF</h1>
+      <div class="spacer"></div>
+      <a class="btn" id="backLink" href="#">Back</a>
+    </div>
+
+    <div class="alert error hidden" id="error"></div>
+    <div class="alert success hidden" id="success"></div>
+
+    <div class="card">
+      <header>Document</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field">
+            <label>Document No.</label>
+            <input type="text" id="docNo" readonly>
+          </div>
+          <div class="field">
+            <label id="counterpartyLabel">Customer</label>
+            <input type="text" id="counterpartyName" readonly>
+          </div>
+          <div class="field">
+            <label>Total</label>
+            <input type="text" id="docTotal" readonly>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Editable - the only two fields that print on the PDF and are
+         worth a last look here. Hidden entirely for a document type
+         that doesn't have the field (e.g. Receipts have no Payment
+         Terms) - see pdf-confirm.js's FIELD_SUPPORT. -->
+    <div class="card">
+      <header>Review before printing</header>
+      <div class="body">
+        <div class="grid">
+          <div class="field col-2" id="paymentTermsField">
+            <label for="paymentTerms">Payment Terms</label>
+            <input type="text" id="paymentTerms">
+            <div class="hint">Prints on the PDF exactly as shown here.</div>
+          </div>
+          <div class="field col-4" id="notesField">
+            <label for="notes">Notes</label>
+            <textarea id="notes"></textarea>
+            <div class="hint">Prints on the PDF exactly as shown here.</div>
+          </div>
+          <div class="field col-4" id="readonlyNote" style="display:none">
+            <div class="hint">This document type has no editable fields here - this is a final look at what will print.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="body" style="display:flex; gap:10px; align-items:center">
+        <button class="btn primary" id="confirmBtn" type="button">Confirm &amp; Generate PDF</button>
+        <button class="btn" id="cancelBtn" type="button">Cancel</button>
+        <div class="spacer"></div>
+        <span class="hint" id="savingHint" style="display:none">Saving...</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pdf-confirm.js"></script>
+</body>
+</html>

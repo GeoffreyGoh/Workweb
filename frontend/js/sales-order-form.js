@@ -198,11 +198,7 @@ el('cancelBtn').addEventListener('click', () => {
 el('pdfBtn').addEventListener('click', async () => {
   clearAlerts();
   if (!state.id) return showError('Save the order first.');
-  try {
-    await openPdf('salesOrder', state.id);
-  } catch (err) {
-    showError(err.message);
-  }
+  window.location.href = `pdf-confirm.html?type=salesOrder&id=${state.id}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 el('poBtn').addEventListener('click', () => {
@@ -246,7 +242,8 @@ el('receiptRows').addEventListener('click', async (event) => {
   clearAlerts();
   try {
     if (pdfBtn) {
-      await openPdf('receipt', pdfBtn.dataset.pdf);
+      window.location.href = `pdf-confirm.html?type=receipt&id=${pdfBtn.dataset.pdf}&back=${encodeURIComponent(window.location.href)}`;
+      return;
     } else if (voidBtn) {
       if (!confirm('Void this receipt? The payment will no longer count.')) return;
       await api.voidReceipt(voidBtn.dataset.void);
@@ -339,11 +336,7 @@ el('deliveryRows').addEventListener('click', async (event) => {
   const button = event.target.closest('[data-sjpdf]');
   if (!button) return;
   clearAlerts();
-  try {
-    await openPdf('deliveryNote', button.dataset.sjpdf);
-  } catch (err) {
-    showError(err.message);
-  }
+  window.location.href = `pdf-confirm.html?type=deliveryNote&id=${button.dataset.sjpdf}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 /** One purchase order per supplier, grouped by each product's default. */

@@ -274,11 +274,10 @@ el('pdfBtn').addEventListener('click', async () => {
     showError('Save the quotation first - a PDF needs a quotation number.');
     return;
   }
-  try {
-    await openPdf('quotation', state.id);
-  } catch (err) {
-    showError(err.message);
-  }
+  // Route through the shared confirm page instead of generating the
+  // PDF immediately - lets the salesperson do a final check/edit of
+  // Payment Terms and Notes (the two fields that actually print) first.
+  window.location.href = `pdf-confirm.html?type=quotation&id=${state.id}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 el('convertBtn').addEventListener('click', async () => {

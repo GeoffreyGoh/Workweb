@@ -67,7 +67,8 @@ rowsEl.addEventListener('click', async (event) => {
 
   try {
     if (pdfBtn) {
-      await openPdf('receipt', pdfBtn.dataset.pdf);
+      window.location.href = `pdf-confirm.html?type=receipt&id=${pdfBtn.dataset.pdf}&back=${encodeURIComponent(window.location.href)}`;
+      return;
     } else {
       if (!confirm('Void this receipt? The payment will no longer count.')) return;
       await api.voidReceipt(voidBtn.dataset.void);

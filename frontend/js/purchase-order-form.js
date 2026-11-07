@@ -289,11 +289,7 @@ el('cancelBtn').addEventListener('click', () => {
 el('pdfBtn').addEventListener('click', async () => {
   clearAlerts();
   if (!state.id) return showError('Save the purchase order first.');
-  try {
-    await openPdf('purchaseOrder', state.id);
-  } catch (err) {
-    showError(err.message);
-  }
+  window.location.href = `pdf-confirm.html?type=purchaseOrder&id=${state.id}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 /* --------------------------------------------------------- load/render */

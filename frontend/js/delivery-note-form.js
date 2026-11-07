@@ -219,11 +219,7 @@ el('cancelBtn').addEventListener('click', () => {
 el('pdfBtn').addEventListener('click', async () => {
   clearAlerts();
   if (!state.id) return showError('Save the delivery note first.');
-  try {
-    await openPdf('deliveryNote', state.id);
-  } catch (err) {
-    showError(err.message);
-  }
+  window.location.href = `pdf-confirm.html?type=deliveryNote&id=${state.id}&back=${encodeURIComponent(window.location.href)}`;
 });
 
 /* --------------------------------------------------------- load/render */

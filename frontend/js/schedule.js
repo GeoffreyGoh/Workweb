@@ -125,11 +125,7 @@ boardEl.addEventListener('click', async (event) => {
   const pdf = event.target.closest('[data-pdf]');
   if (pdf) {
     event.stopPropagation();
-    try {
-      await openPdf('deliveryNote', pdf.dataset.pdf);
-    } catch (err) {
-      showError(err.message);
-    }
+    window.location.href = `pdf-confirm.html?type=deliveryNote&id=${pdf.dataset.pdf}&back=${encodeURIComponent(window.location.href)}`;
     return;
   }
   const row = event.target.closest('tr[data-id]');

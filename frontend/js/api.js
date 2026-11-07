@@ -157,6 +157,7 @@ const api = {
     apiFetch(`/reports/statement/${customerId}${qs(params)}`),
 
   listReceipts: (params) => apiFetch(`/receipts${qs(params)}`),
+  getReceipt: (id) => apiFetch(`/receipts/${id}`),
   createReceipt: (body) => apiFetch('/receipts', { method: 'POST', body }),
   voidReceipt: (id) => apiFetch(`/receipts/${id}`, { method: 'DELETE' }),
 
