@@ -156,6 +156,7 @@ function buildPayload() {
   if (!state.customer) throw new Error('Please select a customer.');
   return {
     customer_id: state.customer.id,
+    description: orNull(el('description').value),
     quotation_date: orNull(el('quotationDate').value),
     last_follow_up: orNull(el('lastFollowUp').value),
     nik_npwp: orNull(el('nikNpwp').value),
@@ -284,6 +285,7 @@ function applyQuotation(q) {
 
   el('quotationNo').value = q.quotation_no;
   loadCompanyOptions(el('companySelect'), { selected: q.company_id });
+  el('description').value = q.description || '';
   el('quotationDate').value = q.quotation_date || '';
   el('lastFollowUp').value = q.last_follow_up || '';
   el('nikNpwp').value = q.nik_npwp || '';
@@ -332,7 +334,7 @@ function applyQuotation(q) {
 }
 
 const HEADER_FIELDS = [
-  'quotationDate', 'lastFollowUp', 'surveyor', 'customerInput', 'nikNpwp', 'phone',
+  'quotationDate', 'lastFollowUp', 'surveyor', 'customerInput', 'description', 'nikNpwp', 'phone',
   'address', 'deliverAddress', 'deliverTo', 'email', 'currency', 'exchangeRate',
   'priceGroup', 'paymentTerms', 'discountPercent', 'ppnPercent',
   'installationCost', 'dpPercent', 'notes',

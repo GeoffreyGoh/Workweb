@@ -34,7 +34,7 @@ async function load() {
             title="${row.can_edit ? '' : 'Created by someone else - read only'}">
           <td class="mono"><strong>${esc(row.quotation_no)}</strong></td>
           <td>${fmtDate(row.quotation_date)}</td>
-          <td>${esc(row.customer_name || '')}<br><span class="hint">${esc(row.customer_code || '')}</span></td>
+          <td>${esc(row.customer_name || '')}<br><span class="hint">${esc(row.customer_code || '')}${row.description ? ' · ' + esc(row.description) : ''}</span></td>
           <td class="center">${statusBadge(row.status)}</td>
           <td class="right mono">${fmtNum(row.total_qty)}</td>
           <td class="right mono">${esc(row.currency)} ${fmtMoney(row.total, row.currency)}</td>

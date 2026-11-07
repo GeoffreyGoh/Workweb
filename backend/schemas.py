@@ -261,6 +261,9 @@ class QuotationItemOut(ORMModel):
 
 class QuotationBase(BaseModel):
     customer_id: int
+    # Free-text, e.g. "Branch 2 - Warehouse" - distinguishes two quotations
+    # for the same customer at different sites. Optional; purely a label.
+    description: Optional[str] = None
     # Which entity issues this. Defaults to the user's own company.
     company_id: Optional[int] = None
     quotation_date: Optional[date] = None
@@ -300,6 +303,7 @@ class QuotationUpdate(QuotationBase):
 class QuotationListOut(ORMModel):
     id: int
     quotation_no: str
+    description: Optional[str] = None
     company_id: Optional[int] = None
     company_name: Optional[str] = None
     company_code: Optional[str] = None
@@ -322,6 +326,7 @@ class QuotationListOut(ORMModel):
 class QuotationOut(ORMModel):
     id: int
     quotation_no: str
+    description: Optional[str] = None
     company_id: Optional[int] = None
     company_name: Optional[str] = None
     company_code: Optional[str] = None

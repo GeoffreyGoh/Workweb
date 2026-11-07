@@ -197,6 +197,11 @@ class Quotation(Base):
     status = Column(String(20), nullable=False, default="draft", index=True)
 
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    # Free-text label the salesperson types in, e.g. "Branch 2 - Warehouse".
+    # Lets two quotations for the SAME customer at different sites/projects
+    # be told apart at a glance in the list, without inventing a second
+    # customer record for every site that customer happens to order from.
+    description = Column(String(150))
     # Snapshot of customer details at quotation time - the master may change
     # later, a printed quotation must not.
     nik_npwp = Column(String(40))
