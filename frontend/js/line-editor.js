@@ -6,6 +6,17 @@
    save and its response overwrites the display.
    ===================================================================== */
 
+// Same mapping as pdf.py's UNIT_LABEL - shown next to the Measure
+// number so "0.8800" on screen reads as an area/length/count rather
+// than a bare, unexplained number. per_sqm and per_sqm_min1m both
+// measure in square metres; per_meter and per_curtain_panel in running
+// metres; per_unit is a plain count with no physical unit.
+const MEASURE_UNIT_LABEL = {
+  per_sqm: 'm²', per_sqm_min1m: 'm²',
+  per_meter: 'm', per_curtain_panel: 'm',
+  per_unit: 'pcs',
+};
+
 const LINE_ROW_HTML = `
   <td class="mono lineNo"></td>
   <td>
@@ -172,7 +183,9 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     lines.forEach((line, i) => {
       const calc = computeLine(line, headerDiscount);
       line.refs.lineNo.textContent = i + 1;
-      line.refs.measure.textContent = fmtNum(calc.measure, 4);
+      line.refs.measure.textContent = line.product
+        ? `${fmtNum(calc.measure, 4)} ${MEASURE_UNIT_LABEL[line.product.price_unit] || ''}`.trim()
+        : fmtNum(calc.measure, 4);
       line.refs.total.textContent = fmtMoney(calc.lineTotal, currency);
       line.refs.net.textContent = fmtMoney(calc.net, currency);
       line.refs.disc.placeholder = String(headerDiscount);
@@ -656,7 +669,7 @@ const LINE_TABLE_HEAD = `
     <th class="right" style="width:80px">Qty</th>
     <th class="right" style="width:90px">Width cm</th>
     <th class="right" style="width:90px">Height cm</th>
-    <th class="right" style="width:78px">Measure</th>
+    <th class="right" style="width:96px">Measure</th>
     <th class="right" style="width:120px">Unit Price</th>
     <th class="right" style="width:76px">Disc %</th>
     <th class="right" style="width:120px">Line Total</th>
