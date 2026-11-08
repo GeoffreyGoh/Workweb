@@ -130,13 +130,25 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       // server actually saves rather than just being a rough estimate.
       // Width is floored the same as every other unit before the panel
       // count is derived from it.
-      const flooredWidth = Math.max(width, Number(line.product.min_width_cm) || 0);
-      let panels = Math.ceil(flooredWidth / 60);
-      const fabricWidth = Number(line.product.fabric_width_cm) || 0;
-      if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
-      const heightM = height / 100;
-      const rawMetres = (heightM + 0.3) * panels + 0.4;
-      measure = Math.ceil(rawMetres / 0.5) * 0.5 * qty;
+      //
+      // Guard: the formula has a fixed +0.4m belt/strap allowance and
+      // rounds UP to the nearest half-metre, so even width=0/height=0
+      // (a brand new, not-yet-filled-in row) computes a phantom 0.5m -
+      // Geoffrey caught this showing up as a default-looking "0.5 m²"
+      // before anything was typed. Width is required for this price
+      // unit (see validate_dimensions), so until it's actually > 0
+      // there is nothing real to measure yet.
+      if (width <= 0) {
+        measure = 0;
+      } else {
+        const flooredWidth = Math.max(width, Number(line.product.min_width_cm) || 0);
+        let panels = Math.ceil(flooredWidth / 60);
+        const fabricWidth = Number(line.product.fabric_width_cm) || 0;
+        if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
+        const heightM = height / 100;
+        const rawMetres = (heightM + 0.3) * panels + 0.4;
+        measure = Math.ceil(rawMetres / 0.5) * 0.5 * qty;
+      }
     } else {
       measure = qty;
     }
