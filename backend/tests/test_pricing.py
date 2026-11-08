@@ -70,20 +70,52 @@ class TestMeasure:
         )
         assert measure == Decimal("4.0000")  # 2m x 2m, unfloored
 
+    def test_per_sqm_floors_at_the_products_own_minimum(self):
+        # Geoffrey's explicit correction: the minimum is a pricing floor
+        # for EVERY price unit, not just per_sqm_min1m. 88cm width with a
+        # 100cm minimum bills as if it were 100cm; height (60cm, no
+        # minimum set) bills on its real size.
+        measure = pricing.compute_measure(
+            "per_sqm", 1, 88, 60, min_width_cm=100,
+        )
+        assert measure == Decimal("0.6000")  # 1.0m x 0.6m
+
+    def test_per_sqm_with_no_minimum_set_is_unaffected(self):
+        # A product with no min_width_cm/min_height_cm configured bills
+        # the real measurement exactly as before this change.
+        assert pricing.compute_measure("per_sqm", 1, 88, 60) == Decimal("0.5280")
+
+    def test_per_meter_floors_at_the_products_own_minimum(self):
+        measure = pricing.compute_measure("per_meter", 1, 88, None, min_width_cm=100)
+        assert measure == Decimal("1.0000")
+
+    def test_per_curtain_panel_floors_width_at_the_products_own_minimum(self):
+        # A width floored up to the minimum before deriving the panel
+        # count - mirrors the per_sqm/per_meter floor, applied before the
+        # "RUMUS GORDEN" panel-counting math runs.
+        floored = pricing.compute_measure(
+            "per_curtain_panel", 1, 50, 150, min_width_cm=100,
+        )
+        unfloored = pricing.compute_measure("per_curtain_panel", 1, 50, 150)
+        # 50cm alone needs 1 panel; floored to 100cm needs 2 - the floor
+        # must actually change the panel count, not just pass through.
+        assert floored != unfloored
+
 
 # -------------------------------------------------------------- validation
 class TestDimensionValidation:
-    def test_width_below_minimum(self):
-        with pytest.raises(pricing.PricingError, match="below the minimum"):
-            pricing.validate_dimensions(product(min_width_cm=Decimal("40")), 30, 100, 1)
+    def test_width_below_minimum_is_accepted_not_rejected(self):
+        # The minimum is a pricing floor only, for every price unit, not
+        # an input restriction - see compute_measure's floor logic for
+        # where the actual billing adjustment happens.
+        pricing.validate_dimensions(product(min_width_cm=Decimal("40")), 30, 100, 1)  # must not raise
 
     def test_width_above_maximum(self):
         with pytest.raises(pricing.PricingError, match="exceeds the maximum"):
             pricing.validate_dimensions(product(max_width_cm=Decimal("300")), 350, 100, 1)
 
-    def test_height_below_minimum(self):
-        with pytest.raises(pricing.PricingError, match="below the minimum"):
-            pricing.validate_dimensions(product(min_height_cm=Decimal("40")), 100, 20, 1)
+    def test_height_below_minimum_is_accepted_not_rejected(self):
+        pricing.validate_dimensions(product(min_height_cm=Decimal("40")), 100, 20, 1)  # must not raise
 
     def test_height_above_maximum(self):
         with pytest.raises(pricing.PricingError, match="exceeds the maximum"):

@@ -94,9 +94,14 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
 
     let measure = 0;
     if (line.product.price_unit === 'per_sqm') {
-      measure = (width / 100) * (height / 100) * qty;
+      // Minimum is a pricing floor for every unit now, not just
+      // per_sqm_min1m - mirrors pricing.compute_measure on the backend.
+      const widthM = Math.max(width, Number(line.product.min_width_cm) || 0) / 100;
+      const heightM = Math.max(height, Number(line.product.min_height_cm) || 0) / 100;
+      measure = widthM * heightM * qty;
     } else if (line.product.price_unit === 'per_meter') {
-      measure = (width / 100) * qty;
+      const widthM = Math.max(width, Number(line.product.min_width_cm) || 0) / 100;
+      measure = widthM * qty;
     } else if (line.product.price_unit === 'per_sqm_min1m') {
       // "RUMUS BLINDS" - mirrors pricing.compute_measure: each side
       // floored at the PRODUCT's own configured minimum (min_width_cm/
@@ -112,7 +117,10 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       // "RUMUS GORDEN" - mirrors pricing.compute_measure exactly, including
       // the half-metre rounding, so this live preview matches what the
       // server actually saves rather than just being a rough estimate.
-      let panels = Math.ceil(width / 60);
+      // Width is floored the same as every other unit before the panel
+      // count is derived from it.
+      const flooredWidth = Math.max(width, Number(line.product.min_width_cm) || 0);
+      let panels = Math.ceil(flooredWidth / 60);
       const fabricWidth = Number(line.product.fabric_width_cm) || 0;
       if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
       const heightM = height / 100;
@@ -131,23 +139,20 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
 
   function markDimensions(line) {
     if (!line.product) return;
-    // per_sqm_min1m accepts (and floor-bills) anything below the
-    // product's minimum - see pricing.compute_measure/validate_dimensions
-    // on the backend - so the minimum side of the check is skipped here
-    // too, to match. The maximum still flags normally.
-    const flooredInsteadOfRejected = line.product.price_unit === 'per_sqm_min1m';
-    const check = (input, min, max) => {
+    // The minimum is a pricing floor for every unit, never an input
+    // restriction - see pricing.compute_measure/validate_dimensions on
+    // the backend - so the minimum side of this check never flags
+    // "invalid" for any price unit. The maximum still flags normally.
+    const check = (input, max) => {
       const value = num(input.value);
-      const effectiveMin = flooredInsteadOfRejected ? null : min;
       const bad =
         !input.disabled &&
         value > 0 &&
-        ((effectiveMin !== null && effectiveMin !== undefined && value < Number(effectiveMin)) ||
-          (max !== null && max !== undefined && value > Number(max)));
+        max !== null && max !== undefined && value > Number(max);
       input.classList.toggle('invalid', Boolean(bad));
     };
-    check(line.refs.width, line.product.min_width_cm, line.product.max_width_cm);
-    check(line.refs.height, line.product.min_height_cm, line.product.max_height_cm);
+    check(line.refs.width, line.product.max_width_cm);
+    check(line.refs.height, line.product.max_height_cm);
   }
 
   function recalc() {
