@@ -527,6 +527,13 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
         `${esc(p.name)}<span class="code">${fmtMoney(p.unit_price)}</span>`,
       onPick: (p) => selectProduct(line, p, { resetPrice: true }),
       floating: true,
+      // Can't find the fabric you want? Jump straight to the admin
+      // Product Catalogue to add it, rather than abandoning the
+      // quotation to go hunt for the right page. Opens in a new tab so
+      // the in-progress quotation is never lost. Products.html itself
+      // still enforces admin-only - a normal user just lands on the
+      // same "not allowed" page they'd get from the nav menu.
+      extraRow: { href: 'products.html', label: '+ Add Product' },
     });
 
     ['width', 'height', 'price', 'disc'].forEach((key) =>

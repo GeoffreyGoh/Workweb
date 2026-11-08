@@ -199,6 +199,7 @@ const I18N = {
 
     'product.list': 'Product Catalogue',
     'product.hint': 'Admin only - this is the price list every quotation is built from',
+    'product.supplierHint': 'No supplier selected',
     'product.add': 'Add Product',
     'product.edit': 'Edit Product',
     'product.new': 'New Product',
@@ -492,6 +493,7 @@ const I18N = {
 
     'product.list': 'Katalog Produk',
     'product.hint': 'Khusus admin - ini daftar harga yang dipakai semua penawaran',
+    'product.supplierHint': 'Belum ada pemasok dipilih',
     'product.add': 'Tambah Produk',
     'product.edit': 'Ubah Produk',
     'product.new': 'Produk Baru',

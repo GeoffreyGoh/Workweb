@@ -435,6 +435,22 @@ input.invalid:focus {
   display: block;
 }
 
+/* The "+ Add Product" / "+ Add Supplier" style link pinned above the
+   search results - a plain <a>, not a pickable row, so it needs its
+   own look (bold, accent color) to read as a different kind of thing. */
+.autocomplete-extra-row,
+.results.floating .autocomplete-extra-row {
+  display: block;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sky-700, #0369a1);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-2);
+  cursor: pointer;
+}
+.autocomplete-extra-row:hover { background: var(--sky-soft); }
+
 /* ------------------------------------------------------------ alerts --- */
 .alert {
   padding: 9px 13px;

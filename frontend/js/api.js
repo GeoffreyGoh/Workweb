@@ -405,6 +405,12 @@ function attachAutocomplete({
   onPick,
   minChars = 0,
   floating = false,
+  // Optional fixed link shown ABOVE the search results, e.g. "+ Add
+  // Product" on the quotation line editor - a way to jump straight to
+  // creating the thing being searched for when it isn't in the list
+  // yet, without a separate button cluttering the row. href is a
+  // plain navigation (new tab), not an onPick result.
+  extraRow = null,
 }) {
   let rows = [];
   let activeIndex = -1;
@@ -429,12 +435,17 @@ function attachAutocomplete({
   };
 
   const draw = () => {
+    const extraHtml = extraRow
+      ? `<a href="${extraRow.href}" target="_blank" class="autocomplete-extra-row">${extraRow.label}</a>`
+      : '';
     if (!rows.length) {
-      resultsEl.innerHTML = '<div class="empty">No matches</div>';
+      resultsEl.innerHTML = extraHtml + '<div class="empty">No matches</div>';
     } else {
-      resultsEl.innerHTML = rows
-        .map((row, i) => `<div data-i="${i}" class="${i === activeIndex ? 'active' : ''}">${render(row)}</div>`)
-        .join('');
+      resultsEl.innerHTML =
+        extraHtml +
+        rows
+          .map((row, i) => `<div data-i="${i}" class="${i === activeIndex ? 'active' : ''}">${render(row)}</div>`)
+          .join('');
     }
     if (floating) position();
     resultsEl.classList.remove('hidden');

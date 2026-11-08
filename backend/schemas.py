@@ -165,12 +165,18 @@ class ProductSparepartOut(ORMModel):
 
 class ProductCreate(ProductBase):
     spareparts: List[ProductSparepartIn] = Field(default_factory=list)
+    # Alternative to picking an existing supplier_id: type a new (or
+    # existing) supplier name directly on the Add Product form, same
+    # auto-save pattern as Quotation.customer_name. Only used when
+    # supplier_id is not already set.
+    supplier_name: Optional[str] = Field(default=None, max_length=150)
 
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
     supplier_id: Optional[int] = None
+    supplier_name: Optional[str] = Field(default=None, max_length=150)
     price_unit: Optional[PriceUnit] = None
     unit_price: Optional[Decimal] = Field(default=None, ge=0)
     min_width_cm: Optional[Decimal] = Field(default=None, ge=0)

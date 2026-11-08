@@ -128,15 +128,40 @@ async function load() {
 
 /* ---------------------------------------------------------------- editor */
 
-function fillSupplierOptions(selectedId) {
-  const select = document.getElementById('fSupplierId');
-  select.innerHTML =
-    '<option value="">-</option>' +
-    suppliers
-      .map((s) => `<option value="${s.id}">${esc(s.code)} — ${esc(s.name)}</option>`)
-      .join('');
-  select.value = selectedId ? String(selectedId) : '';
+const supplierInput = document.getElementById('fSupplierInput');
+let currentSupplier = null; // the picked supplier object, or null if typed-but-unmatched/empty
+
+function setSupplier(supplier) {
+  currentSupplier = supplier;
+  supplierInput.value = supplier ? supplier.name : '';
+  document.getElementById('fSupplierHint').textContent = supplier
+    ? `${supplier.code} — selected`
+    : 'No supplier selected';
 }
+
+attachAutocomplete({
+  input: supplierInput,
+  resultsEl: document.getElementById('fSupplierResults'),
+  search: (term) => api.listSuppliers(term),
+  render: (s) => `${esc(s.name)}<span class="code">${esc(s.code)}</span>`,
+  onPick: (s) => setSupplier(s),
+});
+
+// Typing a name with no matching pick is allowed, same as the
+// customer field on the quotation form - readForm() below sends it as
+// supplier_name instead of supplier_id, and the server auto-saves it
+// as a new (or reused, by name) supplier.
+supplierInput.addEventListener('input', () => {
+  if (currentSupplier && supplierInput.value.trim() !== currentSupplier.name) {
+    currentSupplier = null;
+  }
+  const typed = supplierInput.value.trim();
+  document.getElementById('fSupplierHint').textContent = currentSupplier
+    ? `${currentSupplier.code} — selected`
+    : typed
+    ? 'New supplier — will be saved when you save this product'
+    : 'No supplier selected';
+});
 
 function openEditor(product) {
   clearAlerts();
@@ -160,7 +185,17 @@ function openEditor(product) {
   set('fMaxH', product ? product.max_height_cm : '');
   set('fDescription', product ? product.description : '');
   document.getElementById('fActive').checked = product ? product.is_active : true;
-  fillSupplierOptions(product ? product.supplier_id : null);
+  // supplier_id/supplier_name come from the product itself; the full
+  // supplier object (with its code) is only needed for the hint text,
+  // so look it up in the already-loaded suppliers cache if possible -
+  // falling back to a name-only stand-in if the lookup fails (e.g. the
+  // supplier was retired and dropped from the active-only list).
+  if (product && product.supplier_id) {
+    const match = suppliers.find((s) => s.id === product.supplier_id);
+    setSupplier(match || { id: product.supplier_id, code: '?', name: product.supplier_name || '' });
+  } else {
+    setSupplier(null);
+  }
   renderSpareparts(product ? product.spareparts : []);
 
   // Quotations and invoices store the code as a snapshot, but purchase-order
@@ -318,7 +353,11 @@ function numOrNull(id) {
 }
 
 function readForm() {
-  const supplier = document.getElementById('fSupplierId').value;
+  // currentSupplier is set by setSupplier() when picked from the
+  // dropdown; if the box has typed text with no pick, send that text as
+  // supplier_name instead - the server auto-creates/reuses it by name,
+  // same pattern as the quotation form's customer field.
+  const typedSupplierName = supplierInput.value.trim();
   return {
     code: document.getElementById('fCode').value.trim(),
     name: document.getElementById('fName').value.trim(),
@@ -331,7 +370,8 @@ function readForm() {
     max_height_cm: numOrNull('fMaxH'),
     description: document.getElementById('fDescription').value.trim() || null,
     is_active: document.getElementById('fActive').checked,
-    supplier_id: supplier ? Number(supplier) : null,
+    supplier_id: currentSupplier ? currentSupplier.id : null,
+    supplier_name: currentSupplier ? null : (typedSupplierName || null),
     spareparts: readSpareparts(),
   };
 }

@@ -58,6 +58,52 @@ def list_products(
     return [_to_out(row) for row in rows]
 
 
+def _next_supplier_code(db: Session) -> str:
+    """Next free SUPP-### code, same scheme as _next_customer_code in
+    quotations.py. Used only when a supplier is auto-created by name from
+    the Add Product form - a supplier created through a (future) proper
+    Suppliers admin page would supply its own code instead.
+    """
+    last = (
+        db.query(models.Supplier.code)
+        .filter(models.Supplier.code.like("SUPP-%"))
+        .order_by(models.Supplier.code.desc())
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last[0].rsplit("-", 1)[1]) + 1
+        except (IndexError, ValueError):
+            seq = 1
+    return f"SUPP-{seq:03d}"
+
+
+def _find_or_create_supplier(db: Session, name: str) -> models.Supplier:
+    """Auto-save flow for a supplier typed directly on the Add Product
+    form instead of picked from the dropdown.
+
+    Matching rule: same name (case-insensitive) reuses the existing
+    supplier; no match creates a new one. Unlike customers there is no
+    second distinguishing field (no site/location concept for a
+    supplier), so name alone is the key - this is deliberately simpler
+    than _find_or_create_customer in quotations.py.
+    """
+    name = name.strip()
+    existing = (
+        db.query(models.Supplier)
+        .filter(models.Supplier.name.ilike(name))
+        .first()
+    )
+    if existing:
+        return existing
+
+    supplier = models.Supplier(code=_next_supplier_code(db), name=name)
+    db.add(supplier)
+    db.flush()  # assign supplier.id without a separate commit
+    return supplier
+
+
 def _duplicate_product_query(db: Session, code, name, category, exclude_id=None):
     """A product is a duplicate only when code, name, AND category all
     match - any one field differing makes it a genuinely different
@@ -125,7 +171,9 @@ def create_product(
     # spareparts is a nested list, not a plain column - build it into
     # relationship objects rather than passing it straight to the model
     # constructor (which only accepts column kwargs).
-    data = payload.model_dump(exclude={"spareparts"})
+    data = payload.model_dump(exclude={"spareparts", "supplier_name"})
+    if not data.get("supplier_id") and payload.supplier_name:
+        data["supplier_id"] = _find_or_create_supplier(db, payload.supplier_name).id
     product = models.Product(**data)
     product.spareparts = [
         models.ProductSparepart(**sp.model_dump()) for sp in payload.spareparts
@@ -169,7 +217,9 @@ def update_product(
             ),
         )
 
-    updates = payload.model_dump(exclude_unset=True, exclude={"spareparts"})
+    updates = payload.model_dump(exclude_unset=True, exclude={"spareparts", "supplier_name"})
+    if not updates.get("supplier_id") and payload.supplier_name:
+        updates["supplier_id"] = _find_or_create_supplier(db, payload.supplier_name).id
     for field, value in updates.items():
         setattr(product, field, value)
 
