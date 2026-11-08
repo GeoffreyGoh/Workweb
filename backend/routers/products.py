@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,7 @@ def _to_out(product: models.Product) -> schemas.ProductOut:
 
 @router.get("", response_model=List[schemas.ProductOut])
 def list_products(
+    response: Response,
     q: Optional[str] = Query(None, description="Search by code or name"),
     active_only: bool = True,
     limit: int = Query(100, le=500),
@@ -44,6 +45,12 @@ def list_products(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
+    # Belt-and-suspenders against a browser or any intermediate proxy/CDN
+    # caching this list - a deleted or edited product must disappear on
+    # the very next fetch, never served stale. The frontend's own fetch()
+    # calls already pass cache: 'no-store' for the same reason; this
+    # header covers any client that doesn't.
+    response.headers["Cache-Control"] = "no-store"
     query = db.query(models.Product)
     if active_only:
         query = query.filter(models.Product.is_active.is_(True))

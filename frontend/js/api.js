@@ -49,6 +49,13 @@ async function apiFetch(path, options = {}) {
     ...options,
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    // Force a real network round-trip on every call, never a cached
+    // response - a deleted/edited product (or any other record) must
+    // disappear from the very next list fetch, not reappear from a
+    // browser-cached GET. Without this, the browser's own HTTP cache
+    // can serve a stale /products list after a delete, making a
+    // permanently-removed product look like it's still there.
+    cache: 'no-store',
   });
 
   // An expired or bad token means the session is over - bounce to login.

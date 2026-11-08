@@ -223,16 +223,22 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     // text that used to display alongside the name.
     line.refs.prodCode.textContent = '';
 
-    // Auto-fill the line's own Description box from the product
-    // catalogue's Description - same idea as Code/Category already
-    // existing as product-level fields; a salesperson can still edit or
-    // clear it by hand, this is just a starting point. Only on a fresh
-    // pick (resetPrice=true), not when re-applying a saved line - a
-    // saved line's description was something the salesperson typed (or
+    // Auto-fill the line's own Description box from the product's code
+    // and category, not its free-text Description field - Geoffrey's
+    // explicit choice: in this catalogue code=color (white, dune,
+    // ivory) and category=collection/"book" (essential, viewscreen),
+    // so showing those on the line makes a quotation unambiguous about
+    // exactly which variant was quoted, instead of just the bare
+    // product name. Formatted as "CODE - Category" (category omitted
+    // if the product has none set). Only on a fresh pick
+    // (resetPrice=true), not when re-applying a saved line - a saved
+    // line's description was something the salesperson typed (or
     // deliberately left blank) and must not be silently overwritten by
     // the catalogue text on every page load.
     if (resetPrice) {
-      line.refs.desc.value = product.description || '';
+      line.refs.desc.value = product.category
+        ? `${product.code} - ${product.category}`
+        : product.code;
     }
 
     if (resetPrice) line.refs.price.value = Number(product.unit_price);
@@ -551,10 +557,11 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       resultsEl: line.refs.prodResults,
       search: (term) => api.listProducts(term),
       render: (p) =>
-        // Just the name and price - code/price_unit were internal jargon
-        // that cluttered the list without helping pick the right fabric;
-        // price is kept since it's actually useful when choosing.
-        `${esc(p.name)}<span class="code">${fmtMoney(p.unit_price)}</span>`,
+        // Geoffrey's explicit choice: show the product's name and its
+        // code (not price) - in this catalogue code=color (white, dune,
+        // ivory...), so this reads as "ROLLERBLINDS - WHITE" rather
+        // than name + an unhelpful price figure while still picking.
+        `${esc(p.name)}<span class="code">${esc(p.code)}</span>`,
       onPick: (p) => selectProduct(line, p, { resetPrice: true }),
       floating: true,
       // Can't find the fabric you want? Jump straight to the admin
