@@ -374,6 +374,7 @@ def _sales_document(doc, title, number_label, number, date_label, date_value,
         "CUSTOMER",
         [
             customer.name if customer else "",
+            f"Up. {doc.attention_to}" if doc.attention_to else None,
             doc.address,
             f"Tel {doc.phone}" if doc.phone else None,
             doc.email,
@@ -551,6 +552,17 @@ def sales_order_pdf(so) -> bytes:
         company=company,
         logo=logo,
     )
+    # Terbilang (the total spelled out in words) - already standard on
+    # receipts (see receipt_pdf below); added here too since real
+    # invoices from this business print it the same way, right under
+    # the totals/payment-terms block. IDR only - spelling out a foreign-
+    # currency figure in Indonesian words would be nonsensical.
+    if so.currency == "IDR":
+        words = terbilang(whole_rupiah(so.total)).strip()
+        story += [
+            Paragraph(f"<i>Terbilang: <b>{_esc(words)} rupiah</b></i>", S["terms"]),
+            Spacer(1, 8),
+        ]
     if so.quotation:
         story += [
             Paragraph(

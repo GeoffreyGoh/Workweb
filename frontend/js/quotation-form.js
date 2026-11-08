@@ -178,6 +178,7 @@ function buildPayload() {
     last_follow_up: orNull(el('lastFollowUp').value),
     nik_npwp: orNull(el('nikNpwp').value),
     surveyor: orNull(el('surveyor').value),
+    attention_to: orNull(el('attentionTo').value),
     address: orNull(el('address').value),
     deliver_to: orNull(el('deliverTo').value),
     deliver_address: orNull(el('deliverAddress').value),
@@ -306,6 +307,7 @@ function applyQuotation(q) {
   el('lastFollowUp').value = q.last_follow_up || '';
   el('nikNpwp').value = q.nik_npwp || '';
   el('surveyor').value = q.surveyor || '';
+  el('attentionTo').value = q.attention_to || '';
   el('address').value = q.address || '';
   el('deliverTo').value = q.deliver_to || '';
   el('deliverAddress').value = q.deliver_address || '';
@@ -350,7 +352,7 @@ function applyQuotation(q) {
 }
 
 const HEADER_FIELDS = [
-  'quotationDate', 'lastFollowUp', 'surveyor', 'customerInput', 'description', 'nikNpwp', 'phone',
+  'quotationDate', 'lastFollowUp', 'surveyor', 'attentionTo', 'customerInput', 'description', 'nikNpwp', 'phone',
   'address', 'deliverAddress', 'deliverTo', 'email', 'currency', 'exchangeRate',
   'priceGroup', 'paymentTerms', 'discountPercent', 'ppnPercent',
   'installationCost', 'dpPercent', 'notes',

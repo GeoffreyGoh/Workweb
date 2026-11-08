@@ -277,6 +277,7 @@ def convert_quotation(
         status="draft",
         nik_npwp=quotation.nik_npwp,
         surveyor=quotation.surveyor,
+        attention_to=quotation.attention_to,
         address=quotation.address,
         deliver_to=quotation.deliver_to,
         deliver_address=quotation.deliver_address,

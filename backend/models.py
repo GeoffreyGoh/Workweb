@@ -231,6 +231,12 @@ class Quotation(Base):
     # later, a printed quotation must not.
     nik_npwp = Column(String(40))
     surveyor = Column(String(120))
+    # The named contact person AT THE CUSTOMER this document is addressed
+    # to - e.g. "Up. Mr. Noel" / "Ibu Rivena" on the real printed Sales
+    # Confirmation samples. Distinct from both the customer's company
+    # name (above) and surveyor (our OWN staff who visited the site) -
+    # this is the client-side person to attention.
+    attention_to = Column(String(120))
     address = Column(Text)
     deliver_to = Column(String(150))
     deliver_address = Column(Text)
@@ -475,6 +481,8 @@ class SalesOrder(Base):
 
     nik_npwp = Column(String(40))
     surveyor = Column(String(120))
+    # Same meaning as Quotation.attention_to - see that column's comment.
+    attention_to = Column(String(120))
     address = Column(Text)
     deliver_to = Column(String(150))
     deliver_address = Column(Text)

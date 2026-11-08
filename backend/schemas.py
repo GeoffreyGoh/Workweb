@@ -319,6 +319,10 @@ class QuotationBase(BaseModel):
     # Left blank, these are copied from the customer master on create.
     nik_npwp: Optional[str] = None
     surveyor: Optional[str] = None
+    # Named contact person at the customer (e.g. "Up. Mr. Noel") - see
+    # models.Quotation.attention_to. Purely free text, never auto-filled
+    # from anywhere since no master record carries one yet.
+    attention_to: Optional[str] = Field(default=None, max_length=120)
     address: Optional[str] = None
     deliver_to: Optional[str] = None
     deliver_address: Optional[str] = None
@@ -386,6 +390,7 @@ class QuotationOut(ORMModel):
     customer_code: Optional[str] = None
     nik_npwp: Optional[str] = None
     surveyor: Optional[str] = None
+    attention_to: Optional[str] = None
     address: Optional[str] = None
     deliver_to: Optional[str] = None
     deliver_address: Optional[str] = None
@@ -471,6 +476,7 @@ class SalesOrderBase(BaseModel):
 
     nik_npwp: Optional[str] = None
     surveyor: Optional[str] = None
+    attention_to: Optional[str] = Field(default=None, max_length=120)
     address: Optional[str] = None
     deliver_to: Optional[str] = None
     deliver_address: Optional[str] = None
@@ -543,6 +549,7 @@ class SalesOrderOut(ORMModel):
     customer_code: Optional[str] = None
     nik_npwp: Optional[str] = None
     surveyor: Optional[str] = None
+    attention_to: Optional[str] = None
     address: Optional[str] = None
     deliver_to: Optional[str] = None
     deliver_address: Optional[str] = None

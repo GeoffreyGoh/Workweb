@@ -134,6 +134,7 @@ function buildPayload() {
     po_reference: orNull(el('poReference').value),
     nik_npwp: orNull(el('nikNpwp').value),
     surveyor: orNull(el('surveyor').value),
+    attention_to: orNull(el('attentionTo').value),
     address: orNull(el('address').value),
     deliver_to: orNull(el('deliverTo').value),
     deliver_address: orNull(el('deliverAddress').value),
@@ -433,6 +434,7 @@ async function applyOrder(so) {
   el('poReference').value = so.po_reference || '';
   el('nikNpwp').value = so.nik_npwp || '';
   el('surveyor').value = so.surveyor || '';
+  el('attentionTo').value = so.attention_to || '';
   el('address').value = so.address || '';
   el('deliverTo').value = so.deliver_to || '';
   el('deliverAddress').value = so.deliver_address || '';
@@ -504,7 +506,7 @@ async function applyOrder(so) {
 
 const HEADER_FIELDS = [
   'orderDate', 'deliveryDate', 'poReference', 'customerInput', 'nikNpwp', 'phone',
-  'address', 'deliverAddress', 'deliverTo', 'surveyor', 'email', 'currency',
+  'address', 'deliverAddress', 'deliverTo', 'surveyor', 'attentionTo', 'email', 'currency',
   'exchangeRate', 'priceGroup', 'paymentTerms', 'discountPercent', 'ppnPercent',
   'installationCost', 'dpPercent', 'notes',
 ];
