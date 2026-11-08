@@ -104,7 +104,24 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
     const price = num(line.refs.price.value);
 
     let measure = 0;
-    if (line.product.price_unit === 'per_sqm') {
+    // Guard shared by every width/height-based unit below: until a real
+    // dimension is actually typed, show measure=0 rather than letting the
+    // minimum-floor logic compute a phantom non-zero number from 0cm
+    // inputs. This is exactly the per_curtain_panel bug Geoffrey already
+    // caught (a fixed allowance producing a phantom 0.5m) - it turned out
+    // to affect every floored unit, not just that one: per_sqm with
+    // width=height=0 and a configured minimum on either side computes a
+    // phantom measure the same way. The real backend
+    // (pricing.validate_dimensions) already requires width/height > 0
+    // before accepting a line at all, so this preview guard just matches
+    // that same "nothing real entered yet" rule.
+    const hasWidth = dimensionsNeeded(line.product.price_unit).width;
+    const hasHeight = dimensionsNeeded(line.product.price_unit).height;
+    const dimensionsEntered = (!hasWidth || width > 0) && (!hasHeight || height > 0);
+
+    if (!dimensionsEntered) {
+      measure = 0;
+    } else if (line.product.price_unit === 'per_sqm') {
       // Minimum is a pricing floor for every unit now, not just
       // per_sqm_min1m - mirrors pricing.compute_measure on the backend.
       const widthM = Math.max(width, Number(line.product.min_width_cm) || 0) / 100;
@@ -130,25 +147,13 @@ function createLineEditor({ tbody, emptyEl, addBtn, headerState, onChange }) {
       // server actually saves rather than just being a rough estimate.
       // Width is floored the same as every other unit before the panel
       // count is derived from it.
-      //
-      // Guard: the formula has a fixed +0.4m belt/strap allowance and
-      // rounds UP to the nearest half-metre, so even width=0/height=0
-      // (a brand new, not-yet-filled-in row) computes a phantom 0.5m -
-      // Geoffrey caught this showing up as a default-looking "0.5 m²"
-      // before anything was typed. Width is required for this price
-      // unit (see validate_dimensions), so until it's actually > 0
-      // there is nothing real to measure yet.
-      if (width <= 0) {
-        measure = 0;
-      } else {
-        const flooredWidth = Math.max(width, Number(line.product.min_width_cm) || 0);
-        let panels = Math.ceil(flooredWidth / 60);
-        const fabricWidth = Number(line.product.fabric_width_cm) || 0;
-        if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
-        const heightM = height / 100;
-        const rawMetres = (heightM + 0.3) * panels + 0.4;
-        measure = Math.ceil(rawMetres / 0.5) * 0.5 * qty;
-      }
+      const flooredWidth = Math.max(width, Number(line.product.min_width_cm) || 0);
+      let panels = Math.ceil(flooredWidth / 60);
+      const fabricWidth = Number(line.product.fabric_width_cm) || 0;
+      if (fabricWidth >= 280) panels = Math.ceil(panels / 2);
+      const heightM = height / 100;
+      const rawMetres = (heightM + 0.3) * panels + 0.4;
+      measure = Math.ceil(rawMetres / 0.5) * 0.5 * qty;
     } else {
       measure = qty;
     }
