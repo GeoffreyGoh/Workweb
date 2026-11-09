@@ -201,6 +201,106 @@ input.num, td input.num { text-align: right; }
 .hint { font-size: 11px; color: var(--text-dim); }
 .hint.hidden { display: none; }
 
+/* ------------------------------------------------------- date picker --- */
+/* Replaces every native input type="date" - see js/date-picker.js for
+   why: a native date input's visible text follows the OS/browser locale
+   (MM/DD/YYYY on a US-locale machine), which this widget fixes by
+   always showing dd/mm/yyyy regardless of locale. */
+.dp-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.dp-text { padding-right: 30px; }
+.dp-icon-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+.dp-icon-btn:hover { color: var(--navy-700); }
+
+.dp-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  width: 230px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(7, 54, 79, 0.18);
+  padding: 8px;
+}
+.dp-popup.hidden { display: none; }
+
+.dp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.dp-month-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.dp-nav {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--navy-700);
+  padding: 2px 8px;
+  border-radius: var(--radius);
+}
+.dp-nav:hover { background: var(--sky-soft); }
+
+.dp-weekdays, .dp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+.dp-weekdays {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.dp-cell {
+  font-size: 12px;
+  padding: 4px 0;
+  border-radius: var(--radius);
+}
+.dp-day { cursor: pointer; }
+.dp-day:hover { background: var(--sky-soft); }
+.dp-today { font-weight: 700; color: var(--navy-700); }
+.dp-selected { background: var(--brass); color: #fff; }
+.dp-selected.dp-today { color: #fff; }
+
+.dp-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-2);
+}
+.dp-today-btn, .dp-clear-btn {
+  border: none;
+  background: transparent;
+  color: var(--navy-700);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.dp-today-btn:hover, .dp-clear-btn:hover { text-decoration: underline; }
+
 /* ----------------------------------------------------------- buttons --- */
 .btn {
   font-family: inherit;
